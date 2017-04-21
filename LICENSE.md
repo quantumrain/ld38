@@ -1,0 +1,1 @@
+Copyright 2017 Stephen Cakebread <https://github.com/quantumrain/LD38>
