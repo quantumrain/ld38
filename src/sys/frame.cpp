@@ -33,7 +33,7 @@ void frame_init() {
 }
 
 void frame_init_view(vec2i view_size) {
-	g_draw_target  = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_SRGB, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
+	g_draw_target  = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_16, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
 	g_depth_target = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::D24S8, gpu_bind::DEPTH_STENCIL, 0));
 
 	g_bloom_fx.init_resources(view_size);
@@ -45,7 +45,7 @@ void frame_step(vec2 view_size) {
 
 	// clear
 
-	gpu_clear(g_draw_target, rgba(0.0f));
+	gpu_clear(g_draw_target, rgba(0.001f, 0.001f, 0.01f, 0.0f));
 	gpu_clear(g_depth_target, rgba(1.0f));
 
 	// game + bloom

@@ -24,3 +24,13 @@
 #undef far
 #undef NEAR
 #undef FAR
+
+#define _WIN32_WINNT_WIN10 0x0A00
+
+#define DXGI_SWAP_EFFECT_FLIP_DISCARD ((DXGI_SWAP_EFFECT)4)
+
+VERSIONHELPERAPI
+IsWindows10OrGreater()
+{
+    return IsWindowsVersionOrGreater( HIBYTE( _WIN32_WINNT_WIN10 ), LOBYTE( _WIN32_WINNT_WIN10 ), 0 );
+}

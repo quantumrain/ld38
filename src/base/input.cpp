@@ -7,6 +7,7 @@ vec2 remap_stick(i32 ix, i32 iy);
 struct raw_input {
 	bool  key[KEY_MAX];
 	vec2i mouse_pos;
+	vec2i mouse_rel;
 	int   mouse_buttons;
 };
 
@@ -35,11 +36,15 @@ void input_update(bool check_for_new_pads) {
 	memcpy(g_input.key,     g_raw_input.key, sizeof(g_input.key));
 
 	vec2i old_mouse_pos = g_input.mouse_pos;
+	vec2i old_mouse_rel = g_input.mouse_rel;
 
 	g_input.mouse_pos             = g_raw_input.mouse_pos;
 	g_input.mouse_buttons_old     = g_input.mouse_buttons;
 	g_input.mouse_buttons         = g_raw_input.mouse_buttons;
 	g_input.mouse_buttons_pressed = g_input.mouse_buttons & ~g_input.mouse_buttons_old;
+
+	g_input.mouse_rel             = g_raw_input.mouse_rel;
+	g_raw_input.mouse_rel         = vec2i(); // TODO: atomic
 
 	if (xinput_get_state) {
 		if (check_for_new_pads || g_input.pad_is_present) {
@@ -81,7 +86,7 @@ void input_update(bool check_for_new_pads) {
 		}
 	}
 
-	if ((old_mouse_pos == g_input.mouse_pos) && !g_input.mouse_buttons) {
+	if ((old_mouse_pos == g_input.mouse_pos) && (old_mouse_rel == g_input.mouse_rel) && !g_input.mouse_buttons) {
 		if (++g_input.mouse_time > 60) {
 			if ((length_sq(g_input.pad_right) > 0.0f) || is_key_down(KEY_LEFT) || is_key_down(KEY_RIGHT) || is_key_down(KEY_UP) || is_key_down(KEY_DOWN))
 				g_input.mouse_active = false;
@@ -99,6 +104,7 @@ void input_update(bool check_for_new_pads) {
 
 void input_lost_focus()                              { memset(&g_raw_input, 0, sizeof(g_raw_input)); }
 void input_mouse_move_event(vec2i pos)               { g_raw_input.mouse_pos     = pos; }
+void input_mouse_relative_move_event(vec2i pos)      { g_raw_input.mouse_rel    += pos; }
 void input_mouse_button_event(int button, bool down) { g_raw_input.mouse_buttons = (g_raw_input.mouse_buttons & ~(1 << button)) | (down << button); }
 void input_key_event(int key, bool down)             { g_raw_input.key[(u8)key]  = down; }
 

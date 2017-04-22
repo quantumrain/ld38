@@ -4,7 +4,7 @@
 #define GPU_SAMPLER_GROUP_SIZE 4
 
 enum class gpu_format {
-	RGBA, RGBA_SRGB, D24S8
+	RGBA, RGBA_SRGB, RGBA_16, D24S8
 };
 
 namespace gpu_bind { enum {

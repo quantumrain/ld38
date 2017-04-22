@@ -153,6 +153,7 @@ struct input {
 	bool	key_old[KEY_MAX];
 
 	vec2i	mouse_pos;
+	vec2i	mouse_rel;
 	int		mouse_buttons;
 	int		mouse_buttons_old;
 	int		mouse_buttons_pressed;
@@ -185,5 +186,6 @@ void input_init();
 void input_update(bool check_for_new_pads);
 void input_lost_focus();
 void input_mouse_move_event(vec2i pos);
+void input_mouse_relative_move_event(vec2i pos);
 void input_mouse_button_event(int button, bool down);
 void input_key_event(int key, bool down);

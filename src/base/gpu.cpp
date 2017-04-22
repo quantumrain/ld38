@@ -102,9 +102,10 @@ gpu_context g_gpu;
 
 // swap chain helpers
 
-static void gpu_swap_chain_desc(DXGI_SWAP_CHAIN_DESC* scd, HWND hwnd, vec2i view_size) {
+static void gpu_swap_chain_desc(DXGI_SWAP_CHAIN_DESC* scd, HWND hwnd) {
 	bool flip_sequential_supported         = IsWindows8OrGreater();
 	bool latency_waitable_object_supported = IsWindows8Point1OrGreater();
+	bool flip_discard_supported            = IsWindows10OrGreater();
 	bool windowed_mode                     = true;
 
 	scd->BufferDesc.RefreshRate = { 60, 1 }; // TODO: force 60? (but need to respect 59.9hz of most monitors)
@@ -117,7 +118,7 @@ static void gpu_swap_chain_desc(DXGI_SWAP_CHAIN_DESC* scd, HWND hwnd, vec2i view
 
 	if (flip_sequential_supported) {
 		scd->BufferCount = 3;
-		scd->SwapEffect  = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+		scd->SwapEffect  = flip_discard_supported ? DXGI_SWAP_EFFECT_FLIP_DISCARD : DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 		scd->Flags       = (latency_waitable_object_supported && windowed_mode) ? DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT : 0;
 	}
 	else {
@@ -160,7 +161,7 @@ void gpu_init(void* hwnd, vec2i view_size) {
 		panic("D3D11CreateDeviceAndSwapChain: not found in d3d11.dll");
 
 	DXGI_SWAP_CHAIN_DESC scd = { };
-	gpu_swap_chain_desc(&scd, g_gpu.hwnd, view_size);
+	gpu_swap_chain_desc(&scd, g_gpu.hwnd);
 
 	u32 flags = 0;
 
@@ -221,8 +222,6 @@ void gpu_init(void* hwnd, vec2i view_size) {
 		if (FAILED(g_gpu.device->CreateBuffer(&bd, 0, &g_gpu.cb[i])))
 			panic("gpu_create_vertex_buffer: CreateBuffer failed");
 	}
-
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 }
 
 void gpu_shutdown() {
@@ -257,15 +256,17 @@ void gpu_reset(vec2i view_size) {
 	if (!g_gpu.device)
 		return;
 
+	g_gpu.context->ClearState();
+
 	for(int i = 1; i < MAX_TEXTURES; i++) {
 		if (g_gpu.texture.discard_on_reset(i))
 			gpu_destroy(texture(i));
 	}
 
 	DXGI_SWAP_CHAIN_DESC scd;
-	gpu_swap_chain_desc(&scd, g_gpu.hwnd, view_size);
+	gpu_swap_chain_desc(&scd, g_gpu.hwnd);
 
-	if (FAILED(g_gpu.swap_chain->ResizeBuffers(0, view_size.x, view_size.y, DXGI_FORMAT_UNKNOWN, scd.Flags))) {
+	if (FAILED(g_gpu.swap_chain->ResizeBuffers(scd.BufferCount, 0, 0, DXGI_FORMAT_UNKNOWN, scd.Flags))) {
 		debug("gpu_reset: ResizeBuffers failed");
 	}
 
@@ -805,6 +806,7 @@ static DXGI_FORMAT to_dx(gpu_format format) {
 	switch(format) {
 		case gpu_format::RGBA:		return DXGI_FORMAT_R8G8B8A8_UNORM;
 		case gpu_format::RGBA_SRGB:	return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		case gpu_format::RGBA_16:	return DXGI_FORMAT_R16G16B16A16_FLOAT;
 		case gpu_format::D24S8:		return DXGI_FORMAT_D24_UNORM_S8_UINT;
 		default: panic("to_dx: unknown gpu_format (%i)", format);
 	}

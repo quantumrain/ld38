@@ -28,6 +28,10 @@ void game_init() {
 
 	define_sound(sfx::DIT, "dit", 2, 2);
 
+	for(int i = 0; i < 20; i++) {
+		spawn_entity(new planet, g_world.r.range(vec2(500.0f, 500.0f)));
+	}
+
 	spawn_entity(new player, vec2());
 }
 
@@ -37,7 +41,7 @@ void game_frame(vec2 view_size) {
 	g_dl_world.reset();
 	g_dl_ui.reset();
 
-	g_request_mouse_capture = false;
+	g_request_mouse_capture = true;
 
 	draw_context dc(g_dl_world);
 	draw_context dc_ui(g_dl_ui);

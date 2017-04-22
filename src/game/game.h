@@ -11,12 +11,14 @@ struct world;
 enum entity_flag : u16 {
 	EF_DESTROYED = 0x1,
 	EF_PLAYER = 0x2,
-	EF_BULLET = 0x4
+	EF_BULLET = 0x4,
+	EF_PLANET = 0x8
 };
 
 enum entity_type : u16 {
 	ET_PLAYER,
-	ET_BULLET
+	ET_BULLET,
+	ET_PLANET
 };
 
 struct entity {
@@ -57,6 +59,21 @@ struct bullet : entity {
 	virtual void draw(draw_context* dc);
 
 	int _time;
+	vec2 _acc;
+	float _damp;
+};
+
+struct planet : entity {
+	planet();
+
+	virtual void init();
+	virtual void tick();
+
+	void draw_bg(draw_context* dc);
+	void draw_mg(draw_context* dc);
+	void draw_fg(draw_context* dc);
+
+	vec2 get_exit_point(vec2 start, vec2 end, float point_radius);
 };
 
 struct world {
@@ -76,6 +93,8 @@ entity* spawn_entity(entity* e, vec2 initial_pos);
 void destroy_entity(entity* e);
 
 int entity_move_slide(entity* e);
+
+planet* get_nearest_planet(vec2 pos);
 
 void world_tick();
 void world_draw(draw_context* dc);

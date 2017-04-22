@@ -75,28 +75,44 @@ DWORD WINAPI game_thread_proc(void*) {
 
 		// update
 
-		if (gpu_begin_frame()) {
+		gpu_begin_frame();
 
-			int dev_notify_id = g_dev_notify_id;
+		int dev_notify_id = g_dev_notify_id;
 
-			if (dev_notify_id != old_notify_id) {
-				old_notify_id = dev_notify_id;
-				//debug("game_thread_proc: device changed - %i", old_notify_id);
-				input_update(true);
-			}
-			else
-				input_update(false);
-
-			frame_step(to_vec2(view_size));
-
-			gpu_present();
+		if (dev_notify_id != old_notify_id) {
+			old_notify_id = dev_notify_id;
+			//debug("game_thread_proc: device changed - %i", old_notify_id);
+			input_update(true);
 		}
-		else {
-			 view_size = { -1, -1 };
-		}
+		else
+			input_update(false);
+
+		frame_step(to_vec2(view_size));
+
+		gpu_present();
 	}
 
 	return 0;
+}
+
+#define HID_USAGE_PAGE_GENERIC		((USHORT) 0x01)
+#define HID_USAGE_GENERIC_MOUSE		((USHORT) 0x02)
+#define HID_USAGE_GENERIC_KEYBOARD	((USHORT) 0x06)
+
+bool set_mouse_input(HWND hwnd, bool capture) {
+	RAWINPUTDEVICE rid;
+
+	rid.usUsagePage	= HID_USAGE_PAGE_GENERIC;
+	rid.usUsage		= HID_USAGE_GENERIC_MOUSE;
+	rid.dwFlags		= capture ? (RIDEV_NOLEGACY | RIDEV_CAPTUREMOUSE) : RIDEV_REMOVE;
+	rid.hwndTarget	= capture ? hwnd : 0;
+
+	if (RegisterRawInputDevices(&rid, 1, sizeof(rid)) == FALSE) {
+		debug("set_mouse_input(%i): FAILED", capture);
+		return false;
+	}
+
+	return true;
 }
 
 vec2i mouse_msg_pos(HWND hwnd) {
@@ -207,8 +223,10 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 				ClipCursor(&rc);
 				show = false;
 				SetCursor(0);
+				set_mouse_input(hwnd, true);
 			}
 			else {
+				set_mouse_input(hwnd, false);
 				ClipCursor(0);
 				show = !g_hide_mouse_cursor;
 				SetCursor(LoadCursor(0, IDC_ARROW));
@@ -329,6 +347,35 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) 
 
 		case WM_MOUSEMOVE:
 			input_mouse_move_event(mouse_msg_pos(hwnd));
+		return 0;
+
+		case WM_INPUT:
+		{
+			char buf[512];
+			UINT dwSize = sizeof(buf);
+
+			if (GetRawInputData((HRAWINPUT)lparam, RID_INPUT, buf, &dwSize, sizeof(RAWINPUTHEADER)) > 0) {
+				RAWINPUT* ri = (RAWINPUT*)buf;
+
+				if (ri->header.dwType == RIM_TYPEMOUSE) {
+					if (ri->data.mouse.lLastX || ri->data.mouse.lLastY) input_mouse_relative_move_event(vec2i(ri->data.mouse.lLastX, ri->data.mouse.lLastY));
+
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_1_DOWN) input_mouse_button_event(0, true);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_2_DOWN) input_mouse_button_event(1, true);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_3_DOWN) input_mouse_button_event(2, true);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_4_DOWN) input_mouse_button_event(3, true);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_5_DOWN) input_mouse_button_event(4, true);
+
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_1_UP) input_mouse_button_event(0, false);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_2_UP) input_mouse_button_event(1, false);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_3_UP) input_mouse_button_event(2, false);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_4_UP) input_mouse_button_event(3, false);
+					if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_5_UP) input_mouse_button_event(4, false);
+
+					//if (ri->data.mouse.usButtonFlags & RI_MOUSE_WHEEL) input_mouse_wheel_event(-(i16)ri->data.mouse.usButtonData / WHEEL_DELTA);
+				}
+			}
+		}
 		return 0;
 
 		// paint

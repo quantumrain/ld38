@@ -47,12 +47,32 @@ int entity_move_slide(entity* e) {
 	return clipped;
 }
 
+planet* get_nearest_planet(vec2 pos) {
+	planet* best   = 0;
+	float   best_d = FLT_MAX;
+
+	for_all([&](entity* e) {
+		if (e->_type == ET_PLANET) {
+			float d = length_sq(e->_pos - pos);
+
+			if (d < best_d) {
+				best   = (planet*)e;
+				best_d = d;
+			}
+		}
+	});
+
+	return best;
+}
+
 void world_tick() {
 	world* w = &g_world;
 
+	// update
+
 	for_all([](entity* e) { e->tick(); });
 
-	w->view_proj = top_down_proj_view(vec2(), 90.0f, w->view_size.x / w->view_size.y, 360.0f, 1.0f, 1000.0f);
+	// prune
 
 	for(int i = 0; i < w->entities.size(); ) {
 		if (w->entities[i]->_flags & EF_DESTROYED)
@@ -60,11 +80,45 @@ void world_tick() {
 		else
 			i++;
 	}
+
+	// camera
+
+	vec2 player_pos;
+	for_all([&](entity* e) { if (e->_type == ET_PLAYER) player_pos = e->_pos; });
+
+	static vec2 camera_pos;
+	static vec2 camera_target;
+	static vec2 old_target_pos;
+
+	vec2  target_pos   = player_pos;
+	vec2  target_delta = target_pos - camera_target;
+	float target_dist  = length(target_delta);
+
+	if (target_dist > 0.01f) {
+		target_delta /= target_dist;
+
+		float d = max(dot(target_pos - old_target_pos, target_delta), 0.0f);
+
+		d *= square(square(clamp((target_dist - 0.0f) / 90.0f, 0.0f, 1.0f)));
+
+		camera_target += target_delta * d;
+	}
+
+	old_target_pos = target_pos;
+
+	camera_pos += (camera_target - camera_pos) * 0.1f;
+
+	// view
+
+	w->view_proj = top_down_proj_view(-camera_pos, 90.0f, w->view_size.x / w->view_size.y, 400.0f, 1.0f, 1000.0f);
 }
 
 void world_draw(draw_context* dc) {
+	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_bg(&dc->copy()); });
+	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_mg(&dc->copy()); });
+	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_fg(&dc->copy()); });
 
-	for_all([dc](entity* e) { if (!(e->_flags & EF_PLAYER)) e->draw(&dc->copy()); });
+	for_all([dc](entity* e) { if (!(e->_flags & (EF_PLAYER | EF_PLANET))) e->draw(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_flags & EF_PLAYER) e->draw(&dc->copy()); });
 
 }

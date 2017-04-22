@@ -12,9 +12,9 @@ void bloom_fx::init_resources(vec2i view_size) {
 		view_size.y = max(view_size.y, 1);
 
 		bl->size   = to_vec2(view_size);
-		bl->reduce = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_SRGB, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
-		bl->blur_x = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_SRGB, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
-		bl->blur_y = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_SRGB, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
+		bl->reduce = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_16, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
+		bl->blur_x = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_16, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
+		bl->blur_y = gpu_discard_on_reset(gpu_create_texture(view_size.x, view_size.y, gpu_format::RGBA_16, gpu_bind::SHADER | gpu_bind::RENDER_TARGET, 0));
 	}
 }
 
