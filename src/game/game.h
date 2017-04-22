@@ -9,11 +9,14 @@
 struct world;
 
 enum entity_flag : u16 {
-	EF_DESTROYED = 0x1
+	EF_DESTROYED = 0x1,
+	EF_PLAYER = 0x2,
+	EF_BULLET = 0x4
 };
 
 enum entity_type : u16 {
-	ET_PLAYER
+	ET_PLAYER,
+	ET_BULLET
 };
 
 struct entity {
@@ -33,6 +36,27 @@ struct entity {
 	f32  _rot;
 	f32  _radius;
 	rgba _colour;
+};
+
+struct player : entity {
+	player();
+
+	virtual void init();
+	virtual void tick();
+	virtual void draw(draw_context* dc);
+
+	bool _firing;
+	int _reload_time;
+};
+
+struct bullet : entity {
+	bullet();
+
+	virtual void init();
+	virtual void tick();
+	virtual void draw(draw_context* dc);
+
+	int _time;
 };
 
 struct world {

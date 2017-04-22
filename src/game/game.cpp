@@ -1,42 +1,26 @@
 #include "pch.h"
 #include "game.h"
 
-const wchar_t* g_win_name = L"LD38 - Base Code";
+/*
+
+	Game ideas
+	----------
+
+	Shooting microbes in a petri dish
+	Collect gems in a small world, PMCE style half level switching when one side is complete
+	Shoot enemies to freeze, pulse to destroy, can't shoot after pulsing, remaining enemies get buffed
+	Small floating circles are the level, shift between circles when they get close
+	3d meta balls surface as world, constantly shifts, fly around surface and shoot stuff
+	Eggs in a nest, protect them from a cuckoo who keeps switching them with her eggs, push out cuckoo eggs, fend off other creatures trying to eat your eggs
+	Tether small planets together, construct a building on each planet, tether large numbers together to make a base you have to defend against waves of enemies, enemies shoot worlds/tethers to break your base into pieces
+	Something with crazy weapons worry about small world later
+
+*/
+
+const wchar_t* g_win_name = L"LD38 - Small World!";
 
 draw_list g_dl_world;
 draw_list g_dl_ui;
-
-struct player : entity {
-	player() : entity(ET_PLAYER) {
-	}
-
-	virtual void tick() {
-		vec2 pad_left = g_input.pad_left;
-
-		if (is_key_down(g_input.bind_left )) pad_left.x -= 1.0f;
-		if (is_key_down(g_input.bind_right)) pad_left.x += 1.0f;
-		if (is_key_down(g_input.bind_up   )) pad_left.y -= 1.0f;
-		if (is_key_down(g_input.bind_down )) pad_left.y += 1.0f;
-
-		if (is_key_down(KEY_LEFT )) pad_left.x -= 1.0f;
-		if (is_key_down(KEY_RIGHT)) pad_left.x += 1.0f;
-		if (is_key_down(KEY_UP   )) pad_left.y -= 1.0f;
-		if (is_key_down(KEY_DOWN )) pad_left.y += 1.0f;
-
-		if (length_sq(pad_left) > 1.0f)
-			pad_left = normalise(pad_left);
-
-		_vel *= 0.8f;
-		_vel += pad_left * 40.0f;
-
-		entity_move_slide(this);
-	}
-
-	virtual void draw(draw_context* dc) {
-		dc->set(g_sheet);
-		draw_tile(*dc, _pos, _radius, _colour, 0, 0);
-	}
-};
 
 void game_init() {
 	g_dl_world.init(64 * 1024, 4096);

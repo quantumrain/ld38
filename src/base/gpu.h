@@ -100,6 +100,7 @@ void gpu_shutdown();
 
 void gpu_reset(vec2i view_size);
 
+bool gpu_begin_frame();
 void gpu_present();
 
 void gpu_toggle_fullscreen();

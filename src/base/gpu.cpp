@@ -90,6 +90,7 @@ struct gpu_context {
 	IDXGISwapChain*			swap_chain;
 	ID3D11Device*			device;
 	ID3D11DeviceContext*	context;
+	HANDLE					ready_for_next_frame;
 
 	::texture			backbuffer;
 	pipeline			active_pipeline;
@@ -102,17 +103,28 @@ gpu_context g_gpu;
 // swap chain helpers
 
 static void gpu_swap_chain_desc(DXGI_SWAP_CHAIN_DESC* scd, HWND hwnd, vec2i view_size) {
-	scd->BufferDesc.RefreshRate	= { 1, 60 };
+	bool flip_sequential_supported         = IsWindows8OrGreater();
+	bool latency_waitable_object_supported = IsWindows8Point1OrGreater();
+	bool windowed_mode                     = true;
 
-	scd->BufferDesc.Format		= DXGI_FORMAT_R8G8B8A8_UNORM;
-	scd->SampleDesc				= { 1, 0 };
-	scd->BufferUsage			= DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	scd->OutputWindow			= hwnd;
-	scd->Windowed				= TRUE;
+	scd->BufferDesc.RefreshRate = { 60, 1 }; // TODO: force 60? (but need to respect 59.9hz of most monitors)
 
-	scd->BufferCount			= 1;
-	scd->SwapEffect				= DXGI_SWAP_EFFECT_DISCARD;
-	scd->Flags					= 0;
+	scd->BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	scd->SampleDesc        = { 1, 0 };
+	scd->BufferUsage       = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	scd->OutputWindow      = hwnd;
+	scd->Windowed          = windowed_mode;
+
+	if (flip_sequential_supported) {
+		scd->BufferCount = 3;
+		scd->SwapEffect  = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+		scd->Flags       = (latency_waitable_object_supported && windowed_mode) ? DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT : 0;
+	}
+	else {
+		scd->BufferCount = 1;
+		scd->SwapEffect  = DXGI_SWAP_EFFECT_DISCARD;
+		scd->Flags       = 0;
+	}
 }
 
 static void acquire_backbuffer() {
@@ -163,10 +175,18 @@ void gpu_init(void* hwnd, vec2i view_size) {
 
 	debug("d3d_feature_level = %i.%i", fl >> 12, (fl >> 8) & 15);
 
-	IDXGIDevice1* dxgi_device1;
-	if (SUCCEEDED(g_gpu.swap_chain->GetDevice(__uuidof(IDXGIDevice1), (void**)&dxgi_device1))) {
-		dxgi_device1->SetMaximumFrameLatency(1);
-		dxgi_device1->Release();
+	IDXGISwapChain2* dxgi_swap_chain2;
+	if ((scd.Flags & DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT) && SUCCEEDED(g_gpu.swap_chain->QueryInterface(__uuidof(IDXGISwapChain2), (void**)&dxgi_swap_chain2))) {
+		dxgi_swap_chain2->SetMaximumFrameLatency(1);
+		g_gpu.ready_for_next_frame = dxgi_swap_chain2->GetFrameLatencyWaitableObject();
+		dxgi_swap_chain2->Release();
+	}
+	else {
+		IDXGIDevice1* dxgi_device1;
+		if (SUCCEEDED(g_gpu.swap_chain->GetDevice(__uuidof(IDXGIDevice1), (void**)&dxgi_device1))) {
+			dxgi_device1->SetMaximumFrameLatency(1);
+			dxgi_device1->Release();
+		}
 	}
 
 	IDXGIDevice* dxgi_device;
@@ -201,6 +221,8 @@ void gpu_init(void* hwnd, vec2i view_size) {
 		if (FAILED(g_gpu.device->CreateBuffer(&bd, 0, &g_gpu.cb[i])))
 			panic("gpu_create_vertex_buffer: CreateBuffer failed");
 	}
+
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 }
 
 void gpu_shutdown() {
@@ -240,7 +262,10 @@ void gpu_reset(vec2i view_size) {
 			gpu_destroy(texture(i));
 	}
 
-	if (FAILED(g_gpu.swap_chain->ResizeBuffers(0, view_size.x, view_size.y, DXGI_FORMAT_UNKNOWN, 0))) {
+	DXGI_SWAP_CHAIN_DESC scd;
+	gpu_swap_chain_desc(&scd, g_gpu.hwnd, view_size);
+
+	if (FAILED(g_gpu.swap_chain->ResizeBuffers(0, view_size.x, view_size.y, DXGI_FORMAT_UNKNOWN, scd.Flags))) {
 		debug("gpu_reset: ResizeBuffers failed");
 	}
 
@@ -248,6 +273,18 @@ void gpu_reset(vec2i view_size) {
 }
 
 // present
+
+bool gpu_begin_frame() {
+	gpu_context* g = &g_gpu;
+
+	if (g->ready_for_next_frame != 0) {
+		// TODO: IDXGIOutput::VWait as a fallback?
+		if (WaitForSingleObject(g->ready_for_next_frame, 1000) != WAIT_OBJECT_0)
+			return false;
+	}
+
+	return true;
+}
 
 void gpu_present() {
 	g_gpu.swap_chain->Present(1, 0);

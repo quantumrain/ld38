@@ -11,10 +11,12 @@
 #include <windows.h>
 #include <guiddef.h>
 #include <d3d11.h>
+#include <dxgi1_3.h>
 #include <xinput.h>
 #include <mmdeviceapi.h>
 #include <audioclient.h>
 #include <dbt.h>
+#include <versionhelpers.h>
 
 #undef max
 #undef min

@@ -37,7 +37,7 @@ struct draw_buffer {
 	draw_buffer();
 	~draw_buffer();
 
-	bool init(int vertex_stride, int max_vertices);
+	bool init(int vertex_stride, int max_vertices, int max_buffers);
 	void destroy();
 
 	void reset();
@@ -45,13 +45,16 @@ struct draw_buffer {
 
 	void flush();
 
-	vertex_buffer _vb;
+	vertex_buffer* _vb;
 
 	u8* _vertices;
 
 	int _num_vertices;
 	int _max_vertices;
 	int _vertex_stride;
+
+	int _buffer_index;
+	int _max_buffers;
 };
 
 struct draw_list {

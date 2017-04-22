@@ -75,19 +75,25 @@ DWORD WINAPI game_thread_proc(void*) {
 
 		// update
 
-		int dev_notify_id = g_dev_notify_id;
+		if (gpu_begin_frame()) {
 
-		if (dev_notify_id != old_notify_id) {
-			old_notify_id = dev_notify_id;
-			//debug("game_thread_proc: device changed - %i", old_notify_id);
-			input_update(true);
+			int dev_notify_id = g_dev_notify_id;
+
+			if (dev_notify_id != old_notify_id) {
+				old_notify_id = dev_notify_id;
+				//debug("game_thread_proc: device changed - %i", old_notify_id);
+				input_update(true);
+			}
+			else
+				input_update(false);
+
+			frame_step(to_vec2(view_size));
+
+			gpu_present();
 		}
-		else
-			input_update(false);
-
-		frame_step(to_vec2(view_size));
-
-		gpu_present();
+		else {
+			 view_size = { -1, -1 };
+		}
 	}
 
 	return 0;

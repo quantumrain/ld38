@@ -4,13 +4,13 @@
 
 // draw_buffer
 
-draw_buffer::draw_buffer() : _vb(0), _vertices(0), _num_vertices(0), _max_vertices(0), _vertex_stride(0) { }
+draw_buffer::draw_buffer() : _vb(0), _vertices(0), _num_vertices(0), _max_vertices(0), _vertex_stride(0), _buffer_index(0), _max_buffers(0) { }
 
 draw_buffer::~draw_buffer() {
 	destroy();
 }
 
-bool draw_buffer::init(int vertex_stride, int max_vertices) {
+bool draw_buffer::init(int vertex_stride, int max_vertices, int max_buffers) {
 	destroy();
 
 	if ((max_vertices <= 0) || (vertex_stride <= 0))
@@ -19,31 +19,47 @@ bool draw_buffer::init(int vertex_stride, int max_vertices) {
 	_num_vertices = 0;
 	_max_vertices = max_vertices;
 	_vertex_stride = vertex_stride;
+	_buffer_index = 0;
+	_max_buffers = max_buffers;
 
 	int size_in_bytes = vertex_stride * max_vertices;
 
-	if (!(_vertices = new u8[size_in_bytes]) || !(_vb = gpu_create_vertex_buffer(vertex_stride, max_vertices))) {
+	if (!(_vertices = new u8[size_in_bytes]) || !(_vb = new vertex_buffer[max_buffers])) {
 		destroy();
 		return false;
+	}
+
+	for(int i = 0; i < _max_buffers; i++) 	{
+		if (!(_vb[i] = gpu_create_vertex_buffer(vertex_stride, max_vertices))) {
+			destroy();
+			return false;
+		}
 	}
 
 	return true;
 }
 
 void draw_buffer::destroy() {
-	gpu_destroy(_vb);
+	if (_vb) {
+		for(int i = 0; i < _max_buffers; i++)
+			gpu_destroy(_vb[i]);
+	}
 
 	delete [] _vertices;
+	delete [] _vb;
 
 	_vb = 0;
 	_vertices = 0;
 	_num_vertices = 0;
 	_max_vertices = 0;
 	_vertex_stride = 0;
+	_buffer_index = 0;
+	_max_buffers = 0;
 }
 
 void draw_buffer::reset() {
 	_num_vertices = 0;
+	_buffer_index = (_buffer_index + 1) % _max_buffers;
 }
 
 u8* draw_buffer::alloc(int count) {
@@ -61,9 +77,9 @@ void draw_buffer::flush() {
 	if (_num_vertices <= 0)
 		return;
 
-	if (void* p = gpu_map(_vb)) {
+	if (void* p = gpu_map(_vb[_buffer_index])) {
 		memcpy(p, _vertices, _num_vertices * _vertex_stride);
-		gpu_unmap(_vb);
+		gpu_unmap(_vb[_buffer_index]);
 	}
 }
 
@@ -79,7 +95,7 @@ bool draw_list::init(int max_triangles, int max_batches) {
 	_max_batches = max_batches;
 	_num_batches = 0;
 
-	if (!_vertices.init(sizeof(v_xyz_uv_rgba), max_triangles * 3)) {
+	if (!_vertices.init(sizeof(v_xyz_uv_rgba), max_triangles * 3, 3)) {
 		destroy();
 		return false;
 	}
@@ -129,7 +145,7 @@ void draw_list::render() {
 
 	_vertices.flush();
 
-	gpu_set_vertex_buffer(_vertices._vb);
+	gpu_set_vertex_buffer(_vertices._vb[_vertices._buffer_index]);
 
 	int base = 0;
 

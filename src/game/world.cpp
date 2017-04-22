@@ -63,5 +63,8 @@ void world_tick() {
 }
 
 void world_draw(draw_context* dc) {
-	for_all([dc](entity* e) { e->draw(&dc->copy()); });
+
+	for_all([dc](entity* e) { if (!(e->_flags & EF_PLAYER)) e->draw(&dc->copy()); });
+	for_all([dc](entity* e) { if (e->_flags & EF_PLAYER) e->draw(&dc->copy()); });
+
 }

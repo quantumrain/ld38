@@ -1,27 +1,39 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="shaders">
-      <UniqueIdentifier>{2548b999-52e2-47c3-8915-1abc4c3fb4fd}</UniqueIdentifier>
+    <Filter Include="base">
+      <UniqueIdentifier>{9121ee0c-7e40-42f3-be6c-8563540aefe6}</UniqueIdentifier>
     </Filter>
     <Filter Include="game">
-      <UniqueIdentifier>{a6bcf498-655b-4eff-b006-27e8cb3ccc79}</UniqueIdentifier>
+      <UniqueIdentifier>{54daa850-141e-493b-a793-96e38321332c}</UniqueIdentifier>
     </Filter>
     <Filter Include="sys">
-      <UniqueIdentifier>{209faeb8-d50f-4ece-b282-113e50d1dbef}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="base">
-      <UniqueIdentifier>{368cc551-58d2-467a-bd81-9058521beff6}</UniqueIdentifier>
+      <UniqueIdentifier>{8f1a1c37-09f9-4193-9795-d7cba3be5b73}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\game\game.h">
-      <Filter>game</Filter>
+    <ClInclude Include="..\src\base\asset.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\audio.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\base.h">
+      <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\src\base\gpu.h">
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\src\base\pch.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\platform.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\stb_image.h">
+      <Filter>base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\base\std.h">
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\src\base\ut.h">
@@ -30,42 +42,48 @@
     <ClInclude Include="..\src\base\vec_ops.h">
       <Filter>base</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\base\stb_image.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\platform.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\std.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\base.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\asset.h">
-      <Filter>base</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\base\audio.h">
-      <Filter>base</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\base\vec_types.h">
       <Filter>base</Filter>
     </ClInclude>
     <ClInclude Include="..\src\sys\sys.h">
       <Filter>sys</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\game\game.h">
+      <Filter>game</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\game\tile_map.h">
       <Filter>game</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\game\game.cpp">
-      <Filter>game</Filter>
+    <ClCompile Include="..\src\base\audio.cpp">
+      <Filter>base</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\game\world.cpp">
-      <Filter>game</Filter>
+    <ClCompile Include="..\src\base\gpu.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\input.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\main.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\pch.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\std.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\base\vec.cpp">
+      <Filter>base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sys\assets.cpp">
+      <Filter>sys</Filter>
     </ClCompile>
     <ClCompile Include="..\src\sys\bloom.cpp">
+      <Filter>sys</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\sys\debug_draw.cpp">
       <Filter>sys</Filter>
     </ClCompile>
     <ClCompile Include="..\src\sys\draw.cpp">
@@ -77,58 +95,26 @@
     <ClCompile Include="..\src\sys\frame.cpp">
       <Filter>sys</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\base\gpu.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\base\main.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\base\pch.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\base\vec.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\base\input.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\base\std.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\sys\debug_draw.cpp">
-      <Filter>sys</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\base\audio.cpp">
-      <Filter>base</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\sys\render_state.cpp">
-      <Filter>sys</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\sys\assets.cpp">
       <Filter>sys</Filter>
     </ClCompile>
     <ClCompile Include="..\src\sys\sound.cpp">
       <Filter>sys</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\game\bullet.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\game.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\player.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\game\tile_map.cpp">
       <Filter>game</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\shaders\fs_blur_x.hlsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\fs_blur_y.hlsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\uv_c.hlsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\fs_reduce.hlsl">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="..\shaders\fs_combine.hlsl">
-      <Filter>shaders</Filter>
-    </None>
+    <ClCompile Include="..\src\game\world.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
