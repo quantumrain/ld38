@@ -86,39 +86,38 @@ void world_tick() {
 	vec2 player_pos;
 	for_all([&](entity* e) { if (e->_type == ET_PLAYER) player_pos = e->_pos; });
 
-	static vec2 camera_pos;
-	static vec2 camera_target;
-	static vec2 old_target_pos;
-
 	vec2  target_pos   = player_pos;
-	vec2  target_delta = target_pos - camera_target;
+	vec2  target_delta = target_pos - w->camera_target;
 	float target_dist  = length(target_delta);
 
 	if (target_dist > 0.01f) {
 		target_delta /= target_dist;
 
-		float d = max(dot(target_pos - old_target_pos, target_delta), 0.0f);
+		float d = max(dot(target_pos - w->camera_old_target, target_delta), 0.0f);
 
 		d *= square(square(clamp((target_dist - 0.0f) / 90.0f, 0.0f, 1.0f)));
 
-		camera_target += target_delta * d;
+		w->camera_target += target_delta * d;
 	}
 
-	old_target_pos = target_pos;
+	w->camera_old_target = target_pos;
 
-	camera_pos += (camera_target - camera_pos) * 0.1f;
+	vec2 camera_delta = (w->camera_target - w->camera_pos) * 0.1f;
+	w->camera_pos += camera_delta;
+	update_stars(camera_delta);
 
 	// view
 
-	w->view_proj = top_down_proj_view(-camera_pos, 90.0f, w->view_size.x / w->view_size.y, 400.0f, 1.0f, 1000.0f);
+	w->view_proj = top_down_proj_view(-w->camera_pos, 90.0f, w->view_size.x / w->view_size.y, 400.0f, 1.0f, 1000.0f);
 }
 
 void world_draw(draw_context* dc) {
+	render_stars(&dc->copy());
+
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_bg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_mg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_fg(&dc->copy()); });
 
 	for_all([dc](entity* e) { if (!(e->_flags & (EF_PLAYER | EF_PLANET))) e->draw(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_flags & EF_PLAYER) e->draw(&dc->copy()); });
-
 }

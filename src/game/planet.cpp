@@ -58,6 +58,7 @@ void planet::tick() {
 
 	_vel += (get_center(_type) - _pos) * 0.001f;
 
+	//avoid_crowd(this, _type, 1.1f);
 	avoid_crowd(this, _type, 0.66f);
 
 	entity_move_slide(this);

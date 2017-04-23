@@ -28,6 +28,8 @@ void game_init() {
 
 	define_sound(sfx::DIT, "dit", 2, 2);
 
+	init_stars();
+
 	for(int i = 0; i < 20; i++) {
 		spawn_entity(new planet, g_world.r.range(vec2(500.0f, 500.0f)));
 	}

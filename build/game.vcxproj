@@ -244,6 +244,7 @@
     <ClCompile Include="..\src\game\game.cpp" />
     <ClCompile Include="..\src\game\planet.cpp" />
     <ClCompile Include="..\src\game\player.cpp" />
+    <ClCompile Include="..\src\game\stars.cpp" />
     <ClCompile Include="..\src\game\tile_map.cpp" />
     <ClCompile Include="..\src\game\world.cpp" />
     <ClCompile Include="..\src\sys\assets.cpp" />

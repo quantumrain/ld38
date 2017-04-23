@@ -81,6 +81,10 @@ struct world {
 
 	list<entity> entities;
 
+	vec2 camera_pos;
+	vec2 camera_target;
+	vec2 camera_old_target;
+
 	vec2 view_size;
 	mat44 view_proj;
 
@@ -113,3 +117,7 @@ template<typename F> void for_all(F&& f) {
 			f(e);
 	}
 }
+
+void init_stars();
+void update_stars(vec2 delta);
+void render_stars(draw_context* dc);
