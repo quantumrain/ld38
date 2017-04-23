@@ -6,7 +6,7 @@
 
 #define DT (1.0f / 60.0f)
 
-#define MAX_TETHERS 3
+#define MAX_TETHERS 4
 #define MAX_PLANET_HEALTH 30
 
 struct world;
@@ -28,6 +28,13 @@ enum entity_type : u16 {
 	ET_TETHER,
 	ET_HOOK,
 	ET_TRACKER
+};
+
+enum building_type {
+	BT_NONE,
+	BT_GENERATOR,	// energy for turrets
+	BT_TURRET,		// shoots nearby enemies
+	BT_HEAL,		// heals nearby planets
 };
 
 struct entity_handle {
@@ -66,9 +73,17 @@ struct player : entity {
 	bool _firing;
 	int _reload_time;
 	float _tether_shot_visible;
+	float _build_visible;
 	int _tether_reload;
 	entity_handle _last_planet;
 	int _heal_tick;
+	float _tether_ready;
+	bool _building;
+	vec2 _build_move;
+	building_type _build_todo;
+	int _shots;
+	float _moves;
+	int _heals_done;
 };
 
 struct bullet : entity {
@@ -81,6 +96,7 @@ struct bullet : entity {
 	int _time;
 	vec2 _acc;
 	float _damp;
+	bool _missile;
 };
 
 struct planet : entity {
@@ -107,6 +123,9 @@ struct planet : entity {
 	float _hurt;
 	float _healed;
 	int _health;
+	float _has_focus;
+	int _turret_tick;
+	building_type _building;
 
 	vec2 _wander;
 
@@ -168,10 +187,15 @@ struct world {
 	vec2 view_size;
 	mat44 view_proj;
 
-	int _num_planets_created;
+	int game_time;
+	int player_dead_time;
 
-	int _level;
-	int _level_timer;
+	int num_planets_created;
+	int num_buildings_created;
+	int num_planets_hurt;
+
+	int level;
+	int level_timer;
 
 	world();
 };
@@ -186,12 +210,14 @@ entity_handle get_entity_handle(entity* e);
 
 int entity_move_slide(entity* e);
 
+player* get_player();
+
 planet* get_nearest_planet(vec2 pos);
 planet* get_nearest_planet_unique(vec2 pos);
 
 entity* find_enemy_near_line(vec2 from, vec2 to, float r);
 
-void world_tick();
+void world_tick(bool paused);
 void world_draw(draw_context* dc);
 
 template<typename T> T* spawn_entity(T* e, vec2 initial_pos) {

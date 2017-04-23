@@ -67,6 +67,10 @@ void tracker::tick() {
 			}
 		}
 	}
+	else {
+		_vel += g_world.r.range(vec2(10.0f));
+		_vel *= 1.05f;
+	}
 
 	avoid_crowd(this);
 

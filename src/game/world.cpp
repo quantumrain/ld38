@@ -5,7 +5,7 @@ world g_world;
 
 // world
 
-world::world() : _num_planets_created(), _level(), _level_timer() { }
+world::world() : game_time(), player_dead_time(), num_planets_created(), num_buildings_created(), level(), level_timer(), num_planets_hurt() { }
 
 // entity
 
@@ -103,6 +103,15 @@ int entity_move_slide(entity* e) {
 	return clipped;
 }
 
+player* get_player() {
+	for(auto& e : g_world.entities) {
+		if (e->_type == ET_PLAYER)
+			return (player*)e;
+	}
+
+	return 0;
+}
+
 planet* get_nearest_planet(vec2 pos) {
 	planet* best   = 0;
 	float   best_d = FLT_MAX;
@@ -171,61 +180,31 @@ entity* find_enemy_near_line(vec2 from, vec2 to, float r) {
 	return best;
 }
 
-void world_tick() {
+void world_tick(bool paused) {
 	world* w = &g_world;
 
-	// update
+	if (!paused) {
+		w->game_time++;
 
-	if (w->_num_planets_created > 0) {
-		if (--w->_level_timer <= 0) {
-			vec2 player_pos;
-			for_all([&](entity* e) { if (e->_type == ET_PLAYER) player_pos = e->_pos; });
+		if (w->num_planets_created > 0) {
+			if (--w->level_timer <= 0) {
+				if (player* pl = get_player()) {
+					vec2 player_pos = pl->_pos;
 
-			w->_level++;
-			w->_level_timer = max(600 - (w->_level * 10) - (w->_num_planets_created * 10), 240);
+					w->level++;
+					w->level_timer = 600;
 
-			for(int i = 0; i < w->_level; i++) {
-				spawn_entity(new tracker, player_pos + rotation(g_world.r.range(PI)) * g_world.r.range(1000.0f, 1500.0f));
+					for(int i = 0; i < (5 + 2 * w->level); i++) {
+						spawn_entity(new tracker, player_pos + rotation(g_world.r.range(PI)) * g_world.r.range(1000.0f, 1500.0f));
+					}
+				}
 			}
 		}
-	}
 
-	for_all([](entity* e) { e->tick(); });
+		for_all([](entity* e) { e->tick(); });
+	}
 
 	entity_prune();
-
-	// camera
-
-	vec2 player_pos;
-	for_all([&](entity* e) { if (e->_type == ET_PLAYER) player_pos = e->_pos; });
-
-	vec2  target_pos   = player_pos;
-	vec2  target_delta = target_pos - w->camera_target;
-	float target_dist  = length(target_delta);
-
-	if (target_dist > 0.01f) {
-		target_delta /= target_dist;
-
-		float d = max(dot(target_pos - w->camera_old_target, target_delta), 0.0f);
-
-		d *= square(square(clamp((target_dist - 0.0f) / 90.0f, 0.0f, 1.0f)));
-
-		w->camera_target += target_delta * d;
-	}
-
-	w->camera_old_target = target_pos;
-
-	vec2 camera_delta = (w->camera_target - w->camera_pos) * 0.1f;
-
-	if (planet* p = get_nearest_planet(player_pos))
-		camera_delta += p->_vel * DT;
-
-	w->camera_pos += camera_delta;
-	update_stars(camera_delta);
-
-	// view
-
-	w->view_proj = top_down_proj_view(-w->camera_pos, 90.0f, w->view_size.x / w->view_size.y, 400.0f, 1.0f, 1000.0f);
 }
 
 void world_draw(draw_context* dc) {

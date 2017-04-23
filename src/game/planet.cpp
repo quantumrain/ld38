@@ -1,6 +1,25 @@
 #include "pch.h"
 #include "game.h"
 
+entity* get_nearest_enemy(vec2 pos) {
+	entity* best   = 0;
+	float   best_d = FLT_MAX;
+
+	for(auto& e : g_world.entities) {
+		if ((e->_flags & EF_DESTROYED) || !(e->_flags & EF_ENEMY))
+			continue;
+
+		float d = length_sq(e->_pos - pos);
+
+		if (d < best_d) {
+			best   = e;
+			best_d = d;
+		}
+	}
+
+	return best;
+}
+
 vec2 get_center(entity_type type) {
 	vec2 centre;
 	int count = 1;
@@ -30,6 +49,9 @@ planet::planet() : entity(ET_PLANET) {
 	_hurt = 0.0f;
 	_healed = 0.0f;
 	_health = MAX_PLANET_HEALTH;
+	_has_focus = 0.0f;
+	_turret_tick = 0;
+	_building = BT_NONE;
 
 	_vel = g_world.r.range(vec2(100.0f));
 }
@@ -49,11 +71,15 @@ void planet::tick() {
 	_wander *= 0.95f;
 	_wander += g_world.r.range(vec2(0.5f));
 
+	if ((g_world.num_planets_created > 0) && (_tethered_to.size() == 0))
+		_vel *= 0.95f;
+
 	_vel += _wander;
 	_vel += (get_center(_type) - _pos) * 0.0001f;
 
 	_hurt *= 0.8f;
 	_healed *= 0.9f;
+	_has_focus *= 0.8f;
 
 	for(int i = 0; i < _tethered_to.size(); ) {
 		if (!get_entity(_tethered_to[i])) {
@@ -63,10 +89,48 @@ void planet::tick() {
 			i++;
 	}
 
+	if (_building == BT_TURRET) {
+		_turret_tick--;
+
+		if (_turret_tick < 0) {
+			int num_gens = 0;
+
+			for(auto& e : g_world.entities)
+				if ((e->_type == ET_PLANET) && (((planet*)e)->_building == BT_GENERATOR))
+					num_gens++;
+
+			_turret_tick = 15 - num_gens;
+
+			if (entity* e = get_nearest_enemy(_pos)) {
+				vec2  delta = e->_pos - _pos;
+				float dist  = length(delta);
+
+				if (dist < 200.0f) {
+					vec2 dir = delta / dist;
+
+					for(int i = 0; i < 1; i++) {
+						bullet* b = (bullet*)spawn_entity(new bullet, _pos);
+
+						vec2 vel = dir * 250.0f;
+
+						b->_vel = perp(vel) * g_world.r.range(0.25f) + _vel;
+						b->_rot = rotation_of(vel);
+						b->_acc = vel * 0.25f;
+						b->_damp = 0.975f;
+						b->_radius = 3.0f;
+						b->_colour = rgba(1.5f, 0.8f, 0.5f, 1.0f);
+						b->_missile = true;
+					}
+				}
+			}
+		}
+	}
+
 	if (_connector) {
 		if (g_world.r.chance(1, 30)) {
 			if (_tethered_to.size() <= 1) {
 				fx_explosion(_pos, sqrtf(_radius) * 0.1f, 10, rgba(0.1f, 0.1f, 1.0f, 0.0f), 0.7f);
+				sound_play(sfx::PLANET_DIE, g_world.r.range(2.0f), g_world.r.range(-5.0f, -8.0f));
 				destroy_entity(this);
 			}
 		}
@@ -146,7 +210,7 @@ void planet::draw_mg2(draw_context* dc) {
 		dc->scale(clamp(_radius / _desired_radius, 0.0f, 1.0f));
 
 		if (!_connector) {
-			dc->shape_outline(vec2(), 64, 20.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.5f, 1.0f) * 0.5f * (0.5f + _pulse * 0.5f));
+			dc->shape_outline(vec2(), 64, 20.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.5f, 1.0f) * 0.5f * (0.5f + _pulse * 0.5f) + rgba(1.0f, 0.0f) * _has_focus);
 		}
 		else {
 			dc->shape(vec2(), 64, 5.0f, 0.0f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * _pulse * 2.75f);
@@ -167,8 +231,40 @@ void planet::draw_fg(draw_context* dc) {
 		else {
 			dc->shape(vec2(), 64, 15.0f, 0.0f, rgba(0.1f, 0.0f, 0.1f, 1.0f));
 
-			dc->shape_outline(vec2(), 64, 5.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * (1.2f - _pulse) * 2.75f);
+			if (_building == BT_NONE) {
+				dc->shape_outline(vec2(), 64, 5.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * (1.2f - _pulse) * 2.75f);
+			}
+
 			dc->shape_outline(vec2(), 64, 15.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * _pulse * 2.75f);
+
+			if (_building == BT_GENERATOR) {
+				float s0 = lerp(13.0f, 15.0f, _pulse);
+				float s1 = lerp(15.0f, 14.0f, _pulse);
+
+				dc->shape(vec2(), 4, s0, PI * 0.0f, rgba(0.0f, 0.2f, 0.0f, 1.0f));
+				dc->shape(vec2(), 4, s1, PI * 0.25f, rgba(0.0f, 0.2f, 0.0f, 1.0f));
+
+				dc->shape_outline(vec2(), 4, s0, PI * 0.0f, 0.5f, rgba(0.4f, 1.5f, 0.2f, 0.0f));
+				dc->shape_outline(vec2(), 4, s1, PI * 0.25f, 0.5f, rgba(0.4f, 1.5f, 0.2f, 0.0f));
+
+				dc->shape_outline(vec2(), 16, lerp(5.0f, 10.0f, _pulse), 0.0f, 0.5f, rgba(0.4f, 1.0f, 0.2f, 0.0f));
+				dc->shape_outline(vec2(), 16, lerp(10.0f, 2.0f, _pulse), 0.0f, 0.5f, rgba(0.4f, 1.0f, 0.2f, 0.0f));
+				dc->shape_outline(vec2(), 16, lerp(1.0f, 3.0f, _pulse), 0.0f, 0.5f, rgba(0.4f, 1.0f, 0.2f, 0.0f));
+			}
+			else if (_building == BT_TURRET) {
+				float s0 = lerp(13.0f, 15.0f, _pulse) * 1.1f;
+				float s1 = lerp(15.0f, 14.0f, _pulse) * 1.1f;
+
+				dc->shape(vec2(), 3, s0, PI * 0.0f, rgba(0.2f, 0.0f, 0.0f, 1.0f));
+				dc->shape(vec2(), 3, s1, PI * 0.33f, rgba(0.2f, 0.0f, 0.0f, 1.0f));
+
+				dc->shape_outline(vec2(), 3, s0, PI * 0.0f, 0.5f, rgba(1.5f, 0.33f, 0.1f, 1.0f));
+				dc->shape_outline(vec2(), 3, s1, PI * 0.33f, 0.5f, rgba(1.5f, 0.33f, 0.1f, 1.0f));
+
+				for(int i = 0; i < 4; i++) {
+					dc->copy().rotate_z(TAU * i / 4.0f + _pulse * TAU).shape_outline(vec2(3.0f, 0.0f), 3, 3.0f, 0.0f, 0.5f, rgba(1.5f, 0.33f, 0.1f, 1.0f));
+				}
+			}
 		}
 	}
 }
@@ -216,11 +312,15 @@ void planet::take_hit() {
 	_hurt = 1.0f;
 	_health--;
 
+	g_world.num_planets_hurt++;
+
 	if (_health < 0) {
 		fx_explosion(_pos, sqrtf(_radius) * 0.2f, _connector ? 10 : 50, rgba(0.1f, 0.1f, 1.0f, 0.0f), _connector ? 0.7f : 1.5f);
-
+		sound_play(sfx::PLANET_DIE, g_world.r.range(2.0f), g_world.r.range(-5.0f, -8.0f));
 		destroy_entity(this);
 	}
+	else
+		sound_play(sfx::PLANET_HURT, g_world.r.range(2.0f), g_world.r.range(-10.0f, -15.0f));
 }
 
 float planet_radius(planet* self, planet* other) {

@@ -94,6 +94,7 @@ struct draw_context {
 	draw_context& translate(float x, float y) { return push(::translate(vec3(x, y, 0.0f))); }
 	draw_context& rotate_z(float x)           { return push(::rotate_z(x)); }
 	draw_context& scale(float x)              { return push(::scale(vec3(x, x, 1.0f))); }
+	draw_context& scale_xy(float x, float y)  { return push(::scale(vec3(x, y, 1.0f))); }
 	draw_context& colour(const rgba& c)       { return push(c); }
 
 	void line(vec2 p0, vec2 p1, float w, rgba c0, rgba c1) const;
@@ -237,11 +238,17 @@ font load_font(const char* name);
 
 enum class sfx {
 	DIT,
-	RAIN,
-	WIND,
-	GRIND,
-	GRIND2,
-	UNIT_EXPLODE,
+	PLANET_DIE,
+	PLANET_HURT,
+	PLANET_GROW,
+	PLANET_HEAL,
+	PLAYER_FIRE,
+	PLAYER_FIRE_ALT,
+	PLAYER_TETHER_READY,
+	PLAYER_BUILD_READY,
+	PLAYER_BUILD_TURRET,
+	PLAYER_BUILD_GENERATOR,
+	TRACKER_DIE,
 	_MAX
 };
 
