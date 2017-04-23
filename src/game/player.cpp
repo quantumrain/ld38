@@ -51,7 +51,7 @@ void player::tick() {
 	planet* was_p = get_nearest_planet(_pos);
 
 	if (was_p) {
-		_vel += was_p->_vel;
+		_vel += was_p->_vel; // TODO: consider tracking our current planet, so we only switch reference frames when we definitively leave a previous one
 	}
 
 	entity_move_slide(this);
@@ -63,11 +63,6 @@ void player::tick() {
 	if (planet* p = get_nearest_planet(_pos)) {
 		if (was_p && (was_p != p)) {
 			vec2 end_pt = was_p->get_exit_point(_old_pos, _pos, _radius);
-
-			//float d = length_sq(was_p->_pos - p->_pos);
-			//
-			//if (d > square(was_p->_radius + p->_radius - 2.0f * _radius))
-			//	p = was_p;
 
 			if (length_sq(end_pt - p->_pos) > square(p->_radius - _radius))
 				p = was_p;
@@ -88,6 +83,11 @@ void player::tick() {
 		if (_reload_time <= 0) {
 			_reload_time = 8;
 
+			vec2 base_v;
+
+			if (planet* p = get_nearest_planet(_pos))
+				base_v = p->_vel;
+
 			vec2 pos = _pos;
 			vec2 dir = rotation(_rot);
 
@@ -99,7 +99,7 @@ void player::tick() {
 				vel *= !i ? 1.0f : 0.99f;
 				vel += perp(dir) * (20.0f * i);
 
-				b->_vel = vel;
+				b->_vel = vel + base_v;
 				b->_rot = rotation_of(vel);
 			}
 
@@ -111,7 +111,7 @@ void player::tick() {
 				vel *= !i ? 1.0f : 0.99f;
 				vel += perp(dir) * (20.0f * i);
 
-				b->_vel = -vel * g_world.r.range(2.0f, 2.5f) + perp(vel) * g_world.r.range(1.0f);
+				b->_vel = -vel * g_world.r.range(2.0f, 2.5f) + perp(vel) * g_world.r.range(1.0f) + base_v;
 				b->_rot = rotation_of(vel);
 				b->_acc = vel * 0.25f;
 				b->_damp = 0.975f;

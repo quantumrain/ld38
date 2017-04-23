@@ -26,7 +26,7 @@ void avoid_crowd(entity* self, entity_type type, float radius_factor) {
 
 vec2 get_center(entity_type type) {
 	vec2 centre;
-	int count = 0;
+	int count = 1; // Start at one so we include the origin so over time we tend back towards the centre of space
 
 	for(auto e : g_world.entities) {
 		if ((e->_flags & EF_DESTROYED) || (e->_type != type))
@@ -36,10 +36,7 @@ vec2 get_center(entity_type type) {
 		count++;
 	}
 
-	if (count > 0)
-		centre /= (float)count;
-
-	return centre;
+	return centre / (float)count;
 }
 
 planet::planet() : entity(ET_PLANET) {
@@ -57,6 +54,19 @@ void planet::tick() {
 		_vel *= 0.99f;
 
 	_vel += (get_center(_type) - _pos) * 0.001f;
+
+	/*for(auto e : g_world.entities) {
+		if ((e->_flags & EF_DESTROYED) || (e->_type != ET_PLANET) && (e != this))
+			continue;
+
+		vec2 delta = e->_pos - _pos;
+
+		if (length_sq(delta) > 0.1f) {
+			delta /= (square(square(max(length(delta) - 2.0f*_radius, 2.0f))));
+
+			_vel += delta;
+		}
+	}*/
 
 	//avoid_crowd(this, _type, 1.1f);
 	avoid_crowd(this, _type, 0.66f);
