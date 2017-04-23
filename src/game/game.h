@@ -6,6 +6,8 @@
 
 #define DT (1.0f / 60.0f)
 
+#define MAX_TETHERS 3
+
 struct world;
 
 enum entity_flag : u16 {
@@ -14,7 +16,8 @@ enum entity_flag : u16 {
 	EF_BULLET    = 0x04,
 	EF_PLANET    = 0x08,
 	EF_TETHER    = 0x10,
-	EF_HOOK      = 0x20
+	EF_HOOK      = 0x20,
+	EF_ENEMY     = 0x40
 };
 
 enum entity_type : u16 {
@@ -22,7 +25,8 @@ enum entity_type : u16 {
 	ET_BULLET,
 	ET_PLANET,
 	ET_TETHER,
-	ET_HOOK
+	ET_HOOK,
+	ET_TRACKER
 };
 
 struct entity_handle {
@@ -62,6 +66,7 @@ struct player : entity {
 	int _reload_time;
 	float _tether_shot_visible;
 	int _tether_reload;
+	entity_handle _last_planet;
 };
 
 struct bullet : entity {
@@ -89,9 +94,17 @@ struct planet : entity {
 
 	vec2 get_exit_point(vec2 start, vec2 end, float point_radius);
 
+	void take_hit();
+
 	bool _captured;
+	bool _connector;
 	float _pulse;
 	float _pulse_t;
+	float _desired_radius;
+	float _hurt;
+	int _health;
+
+	vec2 _wander;
 
 	array<entity_handle> _tethered_to;
 };
@@ -103,13 +116,16 @@ struct tether : entity {
 
 	virtual void init();
 	virtual void tick();
-	virtual void draw(draw_context* dc);
+
+	void draw_bg(draw_context* dc);
+	void draw_fg(draw_context* dc);
 
 	entity_handle _from;
 	entity_handle _to;
 };
 
 bool has_tether(entity* a, entity* b);
+void make_tether(planet* from, planet* to);
 
 struct hook : entity {
 	hook();
@@ -120,6 +136,16 @@ struct hook : entity {
 
 	int _time;
 	entity_handle _from;
+};
+
+struct tracker : entity {
+	tracker();
+
+	virtual void init();
+	virtual void tick();
+	virtual void draw(draw_context* dc);
+
+	int _hit_timer;
 };
 
 struct world {
@@ -135,6 +161,9 @@ struct world {
 
 	vec2 view_size;
 	mat44 view_proj;
+
+	int _level;
+	int _level_timer;
 
 	world();
 };

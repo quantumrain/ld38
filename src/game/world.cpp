@@ -5,7 +5,7 @@ world g_world;
 
 // world
 
-world::world() { }
+world::world() : _level(), _level_timer() { }
 
 // entity
 
@@ -61,7 +61,8 @@ entity_handle get_entity_handle(entity* e) {
 		for(int i = 0; i < w->handles.size(); i++) {
 			if (!w->handles[i]) {
 				w->handles[i] = e;
-				return entity_handle(i);
+				e->_handle_internal = entity_handle(i);
+				return e->_handle_internal;
 			}
 		}
 
@@ -108,7 +109,7 @@ planet* get_nearest_planet(vec2 pos) {
 
 	for_all([&](entity* e) {
 		if (e->_type == ET_PLANET) {
-			float d = length_sq(e->_pos - pos);
+			float d = length(e->_pos - pos) - e->_radius;
 
 			if (d < best_d) {
 				best   = (planet*)e;
@@ -143,6 +144,18 @@ void world_tick() {
 	world* w = &g_world;
 
 	// update
+
+	if (--w->_level_timer <= 0) {
+		vec2 player_pos;
+		for_all([&](entity* e) { if (e->_type == ET_PLAYER) player_pos = e->_pos; });
+
+		w->_level++;
+		w->_level_timer = 240;
+
+		for(int i = 0; i < w->_level; i++) {
+			spawn_entity(new tracker, player_pos + rotation_of(g_world.r.range(PI)) * 1000.0f);
+		}
+	}
 
 	for_all([](entity* e) { e->tick(); });
 
@@ -188,7 +201,8 @@ void world_draw(draw_context* dc) {
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_bg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_mg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_mg2(&dc->copy()); });
-	for_all([dc](entity* e) { if (e->_type == ET_TETHER) e->draw(&dc->copy()); });
+	for_all([dc](entity* e) { if (e->_type == ET_TETHER) ((tether*)e)->draw_bg(&dc->copy()); });
+	for_all([dc](entity* e) { if (e->_type == ET_TETHER) ((tether*)e)->draw_fg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_fg(&dc->copy()); });
 
 	for_all([dc](entity* e) { if (!(e->_flags & (EF_PLAYER | EF_PLANET | EF_TETHER))) e->draw(&dc->copy()); });

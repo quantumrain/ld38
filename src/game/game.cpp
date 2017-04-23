@@ -30,13 +30,18 @@ void game_init() {
 
 	init_stars();
 
-	for(int i = 0; i < 200; i++) {
-		spawn_entity(new planet, g_world.r.range(vec2(5000.0f, 5000.0f)));
-	}
+	//for(int i = 0; i < 200; i++) {
+	//	spawn_entity(new planet, g_world.r.range(vec2(5000.0f, 5000.0f)));
+	//}
 
-	if (planet* p = get_nearest_planet(vec2())) {
+	//if (planet* p = get_nearest_planet(vec2())) {
+	if (planet* p = spawn_entity(new planet, vec2())) {
 		p->_captured = true;
-		spawn_entity(new player, p->_pos);
+		p->_desired_radius = 80.0f;
+
+		if (player* pl = spawn_entity(new player, p->_pos)) {
+			pl->_last_planet = get_entity_handle(p);
+		}
 	}
 }
 

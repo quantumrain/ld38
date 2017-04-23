@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "game.h"
 
+#define MAX_PLANET_HEALTH 30
+
 vec2 get_center(entity_type type) {
 	vec2 centre;
 	int count = 1;
@@ -21,10 +23,13 @@ vec2 get_center(entity_type type) {
 
 planet::planet() : entity(ET_PLANET) {
 	_flags |= EF_PLANET;
-	_radius = 50.0f;
+	_radius = 10.0f;
 	_captured = false;
+	_connector = false;
 	_pulse = g_world.r.rand(1.0f);
 	_pulse_t = g_world.r.range(PI);
+	_hurt = 0.0f;
+	_health = MAX_PLANET_HEALTH;
 
 	_vel = g_world.r.range(vec2(100.0f));
 }
@@ -36,20 +41,31 @@ void planet::tick() {
 	if (length_sq(_vel) > square(300.0f))
 		_vel *= 0.99f;
 
+	_radius += (_desired_radius - _radius) * 0.1f;
+
+	_wander *= 0.95f;
+	_wander += g_world.r.range(vec2(0.5f));
+
+	_vel += _wander;
 	_vel += (get_center(_type) - _pos) * 0.0001f;
 
-	/*for(auto e : g_world.entities) {
-		if ((e->_flags & EF_DESTROYED) || (e->_type != ET_PLANET) && (e != this))
-			continue;
+	_hurt *= 0.8f;
 
-		vec2 delta = e->_pos - _pos;
-
-		if (length_sq(delta) > 0.1f) {
-			delta /= (square(square(max(length(delta) - 2.0f*_radius, 2.0f))));
-
-			_vel += delta;
+	for(int i = 0; i < _tethered_to.size(); ) {
+		if (!get_entity(_tethered_to[i])) {
+			_tethered_to.swap_remove(i);
 		}
-	}*/
+		else
+			i++;
+	}
+
+	if (_connector) {
+		if (g_world.r.chance(1, 30)) {
+			if (_tethered_to.size() <= 1) {
+				destroy_entity(this);
+			}
+		}
+	}
 
 	for(auto e : g_world.entities) {
 		if ((e == this) || (e->_flags & EF_DESTROYED) || (e->_type != ET_PLANET))
@@ -97,10 +113,14 @@ void planet::draw_bg(draw_context* dc) {
 	dc->translate(_pos);
 	dc->rotate_z(_rot);
 
-	dc->shape(vec2(), 64, _radius + 2.0f, 0.0f, rgba(0.0f, 0.0f, 0.075f, 0.0f));
-	dc->shape(vec2(), 64, _radius + 0.0f, 0.0f, rgba(0.0f, 0.0f, 0.15f, 0.0f));
-	dc->shape(vec2(), 64, _radius - 2.0f, 0.0f, rgba(0.0f, 0.0f, 0.3f, 0.0f));
-	dc->shape(vec2(), 64, _radius - 4.0f, 0.0f, rgba(0.5f, 0.3f, 1.6f, 0.0f));
+	float f = clamp(1.0f - (_health / (float)MAX_PLANET_HEALTH), 0.0f, 1.0f);
+
+	rgba c = lerp(rgba(0.0f, 0.0f, 1.0f, 0.0f), rgba(1.0f, 0.0f, 0.0f, 0.0f), f);
+
+	dc->shape(vec2(), 64, _radius + 2.0f, 0.0f, c * 0.075f);
+	dc->shape(vec2(), 64, _radius + 0.0f, 0.0f, c * 0.15f);
+	dc->shape(vec2(), 64, _radius - 2.0f, 0.0f, c * 0.3f);
+	dc->shape(vec2(), 64, _radius - 4.0f, 0.0f, lerp(rgba(0.5f, 0.3f, 1.6f, 0.0f), rgba(1.0f, 0.3f, 0.1f, 0.0f), f) + rgba(2.0f, 0.0f) * _hurt);
 }
 
 void planet::draw_mg(draw_context* dc) {
@@ -115,7 +135,12 @@ void planet::draw_mg2(draw_context* dc) {
 		dc->translate(_pos);
 		dc->rotate_z(_rot);
 
-		dc->shape_outline(vec2(), 64, 20.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.5f, 1.0f) * 0.5f * (0.5f + _pulse * 0.5f));
+		if (!_connector) {
+			dc->shape_outline(vec2(), 64, 20.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.5f, 1.0f) * 0.5f * (0.5f + _pulse * 0.5f));
+		}
+		else {
+			dc->shape(vec2(), 64, 5.0f, 0.0f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * _pulse * 2.75f);
+		}
 	}
 }
 
@@ -124,10 +149,15 @@ void planet::draw_fg(draw_context* dc) {
 		dc->translate(_pos);
 		dc->rotate_z(_rot);
 
-		dc->shape(vec2(), 64, 15.0f, 0.0f, rgba(0.1f, 0.0f, 0.1f, 1.0f));
+		if (_connector) {
+			dc->shape(vec2(), 64, 4.0f, 0.0f, rgba(0.0f, 1.0f));
+		}
+		else {
+			dc->shape(vec2(), 64, 15.0f, 0.0f, rgba(0.1f, 0.0f, 0.1f, 1.0f));
 
-		dc->shape_outline(vec2(), 64, 5.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * (1.2f - _pulse) * 2.75f);
-		dc->shape_outline(vec2(), 64, 15.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * _pulse * 2.75f);
+			dc->shape_outline(vec2(), 64, 5.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * (1.2f - _pulse) * 2.75f);
+			dc->shape_outline(vec2(), 64, 15.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * _pulse * 2.75f);
+		}
 	}
 }
 
@@ -170,11 +200,25 @@ vec2 planet::get_exit_point(vec2 start, vec2 end, float point_radius) {
 	return end;
 }
 
+void planet::take_hit() {
+	_hurt = 1.0f;
+	_health--;
+
+	if (_health < 0)
+		destroy_entity(this);
+}
+
 float planet_radius(planet* self, planet* other) {
+	float r = self->_radius;
+
 	for(auto& h : self->_tethered_to) {
-		if (get_entity(h) == other)
-			return self->_radius * 0.66f;
+		if (get_entity(h) == other) {
+			if (self->_connector)
+				r *= 0.25f;
+
+			return r - 10.0f;
+		}
 	}
 
-	return self->_radius * 1.2f;
+	return r + (!self->_connector ? 3.0f : 1.0f);
 }

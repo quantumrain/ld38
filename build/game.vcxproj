@@ -248,6 +248,7 @@
     <ClCompile Include="..\src\game\stars.cpp" />
     <ClCompile Include="..\src\game\tether.cpp" />
     <ClCompile Include="..\src\game\tile_map.cpp" />
+    <ClCompile Include="..\src\game\tracker.cpp" />
     <ClCompile Include="..\src\game\world.cpp" />
     <ClCompile Include="..\src\sys\assets.cpp" />
     <ClCompile Include="..\src\sys\bloom.cpp" />

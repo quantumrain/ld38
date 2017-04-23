@@ -50,7 +50,11 @@ void player::tick() {
 		_rot = normalise_radians(_rot + normalise_radians(rotation_of(_vel) - _rot) * 0.2f * rate);
 	}
 
-	planet* was_p = get_nearest_planet(_pos);
+	planet* was_p = (planet*)get_entity(_last_planet);
+
+	if (!was_p) {
+		was_p = get_nearest_planet(_pos);
+	}
 
 	if (was_p) {
 		// TODO: consider tracking our current planet, so we only switch reference frames when we definitively leave a previous one
@@ -87,6 +91,8 @@ void player::tick() {
 			_pos = p->_pos + delta * d;
 			_vel = cancel(_vel, delta);
 		}
+
+		_last_planet = get_entity_handle(p);
 	}
 
 	if (firing) {
@@ -134,16 +140,46 @@ void player::tick() {
 
 	if (_tether_reload <= 0) {
 		if (planet* p = get_nearest_planet_unique(_pos)) {
-			if (length_sq(p->_pos - _pos) > square(p->_radius - _radius * 4.0f)) {
-				tether_visible = true;
+			if (p == was_p) {
+				if (!p->_connector) {
+					if (length_sq(p->_pos - _pos) > square(p->_radius - _radius * 4.0f)) {
+						tether_visible = true;
 
-				if (p->_tethered_to.size() < 3) {
-					if ((g_input.mouse_buttons_pressed & 2) != 0) {
-						_tether_reload = 15;
+						if (p->_tethered_to.size() < MAX_TETHERS) {
+							if ((g_input.mouse_buttons_pressed & 2) != 0) {
+								_tether_reload = 15;
 
-						if (hook* h = spawn_entity(new hook, p->_pos)) {
-							h->_vel = p->_vel + normalise(_pos - p->_pos) * 1000.0f;
-							h->_from = get_entity_handle(p);
+		#if 0
+								if (hook* h = spawn_entity(new hook, p->_pos)) {
+									h->_vel = p->_vel + normalise(_pos - p->_pos) * 1000.0f;
+									h->_from = get_entity_handle(p);
+								}
+		#else
+								planet* parts[10];
+
+								int count = g_world.r.range(4, 10);
+
+								float dd = p->_radius - 20.0f;
+
+								for(int i = 0; i < count; i++) {
+									float r = (i < (count - 1)) ? 20.0f : g_world.r.range(40.0f, 80.0f);
+
+									dd += r;
+
+									parts[i] = spawn_entity(new planet, p->_pos + normalise(_pos - p->_pos) * dd);
+
+									parts[i]->_desired_radius = r;
+									parts[i]->_connector = (i < (count - 1));
+									parts[i]->_vel = vec2();
+
+									if (i > 0)
+										make_tether(parts[i - 1], parts[i]);
+								}
+
+								make_tether(p, parts[0]);
+						
+		#endif
+							}
 						}
 					}
 				}

@@ -34,22 +34,7 @@ void hook::tick() {
 				continue;
 
 			if (length_sq(_pos - other->_pos) < square(other->_radius + _radius)) {
-
-				if (!has_tether(from, e)) {
-					if ((from->_tethered_to.size() < 3) && (other->_tethered_to.size() < 3)) {
-						if (tether* t = spawn_entity(new tether, vec2())) {
-							t->_from = get_entity_handle(from);
-							t->_to   = get_entity_handle(other);
-
-							from ->_captured = true;
-							other->_captured = true;
-
-							from ->_tethered_to.push_back(get_entity_handle(other));
-							other->_tethered_to.push_back(get_entity_handle(from ));
-						}
-					}
-				}
-
+				make_tether(from, other);
 				destroy_entity(this);
 
 				break;
