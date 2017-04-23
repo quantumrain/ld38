@@ -23,18 +23,21 @@ draw_list g_dl_world;
 draw_list g_dl_ui;
 
 void game_init() {
-	g_dl_world.init(64 * 1024, 4096);
-	g_dl_ui.init(64 * 1024, 4096);
+	g_dl_world.init(256 * 1024, 4096);
+	g_dl_ui.init(256 * 1024, 4096);
 
 	define_sound(sfx::DIT, "dit", 2, 2);
 
 	init_stars();
 
-	for(int i = 0; i < 20; i++) {
-		spawn_entity(new planet, g_world.r.range(vec2(500.0f, 500.0f)));
+	for(int i = 0; i < 200; i++) {
+		spawn_entity(new planet, g_world.r.range(vec2(5000.0f, 5000.0f)));
 	}
 
-	spawn_entity(new player, vec2());
+	if (planet* p = get_nearest_planet(vec2())) {
+		p->_captured = true;
+		spawn_entity(new player, p->_pos);
+	}
 }
 
 void game_frame(vec2 view_size) {

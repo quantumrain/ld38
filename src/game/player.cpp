@@ -6,6 +6,8 @@ player::player() : entity(ET_PLAYER) {
 	_firing = false;
 	_reload_time = 0;
 	_radius = 5.0f;
+	_tether_shot_visible = 0.0f;
+	_tether_reload = 0;
 }
 
 void player::init() {
@@ -65,10 +67,15 @@ void player::tick() {
 
 	if (planet* p = get_nearest_planet(_pos)) {
 		if (was_p && (was_p != p)) {
-			vec2 end_pt = was_p->get_exit_point(_old_pos, _pos, _radius);
-
-			if (length_sq(end_pt - p->_pos) > square(p->_radius - _radius))
+			if (!p->_captured) {
 				p = was_p;
+			}
+			else {
+				vec2 end_pt = was_p->get_exit_point(_old_pos, _pos, _radius);
+
+				if (length_sq(end_pt - p->_pos) > square(p->_radius - _radius))
+					p = was_p;
+			}
 		}
 
 		vec2  delta = _pos - p->_pos;
@@ -122,10 +129,37 @@ void player::tick() {
 			}
 		}
 	}
+
+	bool tether_visible = false;
+
+	if (_tether_reload <= 0) {
+		if (planet* p = get_nearest_planet_unique(_pos)) {
+			if (length_sq(p->_pos - _pos) > square(p->_radius - _radius * 4.0f)) {
+				tether_visible = true;
+
+				if (p->_tethered_to.size() < 3) {
+					if ((g_input.mouse_buttons_pressed & 2) != 0) {
+						_tether_reload = 15;
+
+						if (hook* h = spawn_entity(new hook, p->_pos)) {
+							h->_vel = p->_vel + normalise(_pos - p->_pos) * 1000.0f;
+							h->_from = get_entity_handle(p);
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+		_tether_reload--;
+
+	_tether_shot_visible += ((tether_visible ? 1.0f : 0.0f) - _tether_shot_visible) * 0.2f;
 }
 
 void player::draw(draw_context* dc) {
 	float r = 7.0f;
+
+	draw_context dcc = dc->copy();
 
 	dc->translate(_pos);
 	dc->rotate_z(_rot);
@@ -149,4 +183,27 @@ void player::draw(draw_context* dc) {
 
 	dc->shape(vec2(0.0f, 0.0f), 5, r * 0.5f, 0.0f, outline);
 	dc->shape(vec2(0.0f, 0.0f), 5, r * 0.5f - 1.5f, 0.0f, black);
+
+	if (planet* p = get_nearest_planet(_pos)) {
+		float mr = p->_radius - _radius * 4.0f;
+
+		if (length_sq(p->_pos - _pos) > square(mr)) {
+			vec2 delta = normalise(_pos - p->_pos);
+
+			float alpha = clamp((length(_pos - p->_pos) - mr) / (_radius * 2.0f), 0.0f, 1.0f);
+
+			vec2 ap = p->_pos + delta * (p->_radius + 5.0f);
+
+			rgba c0 = rgba(1.3f, 0.2f, 1.3f, 0.0f);
+			rgba c1 = rgba(0.3f, 0.1f, 0.3f, 0.0f);
+
+			if (p->_tethered_to.size() >= 3) {
+				c0 = rgba(0.5f, 1.0f);
+				c1 = rgba(0.2f, 1.0f);
+			}
+
+			dcc.shape_outline(ap, 3, 5.0f, rotation_of(delta), 0.5f, c0 * _tether_shot_visible * alpha);
+			dcc.shape_outline(ap, 3, 10.0f, rotation_of(delta), 0.5f, c1 * _tether_shot_visible * alpha);
+		}
+	}
 }

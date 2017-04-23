@@ -120,6 +120,25 @@ planet* get_nearest_planet(vec2 pos) {
 	return best;
 }
 
+planet* get_nearest_planet_unique(vec2 pos) {
+	planet* best = 0;
+
+	for(auto& e : g_world.entities) {
+		if ((!(e->_flags & EF_DESTROYED)) && (e->_type == ET_PLANET)) {
+			float d = length_sq(e->_pos - pos);
+
+			if (d < square(e->_radius)) {
+				if (best)
+					return 0;
+
+				best = (planet*)e;
+			}
+		}
+	}
+
+	return best;
+}
+
 void world_tick() {
 	world* w = &g_world;
 
@@ -151,6 +170,10 @@ void world_tick() {
 	w->camera_old_target = target_pos;
 
 	vec2 camera_delta = (w->camera_target - w->camera_pos) * 0.1f;
+
+	if (planet* p = get_nearest_planet(player_pos))
+		camera_delta += p->_vel * DT;
+
 	w->camera_pos += camera_delta;
 	update_stars(camera_delta);
 
@@ -164,8 +187,10 @@ void world_draw(draw_context* dc) {
 
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_bg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_mg(&dc->copy()); });
+	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_mg2(&dc->copy()); });
+	for_all([dc](entity* e) { if (e->_type == ET_TETHER) e->draw(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_fg(&dc->copy()); });
 
-	for_all([dc](entity* e) { if (!(e->_flags & (EF_PLAYER | EF_PLANET))) e->draw(&dc->copy()); });
+	for_all([dc](entity* e) { if (!(e->_flags & (EF_PLAYER | EF_PLANET | EF_TETHER))) e->draw(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_flags & EF_PLAYER) e->draw(&dc->copy()); });
 }

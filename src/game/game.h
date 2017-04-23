@@ -9,16 +9,20 @@
 struct world;
 
 enum entity_flag : u16 {
-	EF_DESTROYED = 0x1,
-	EF_PLAYER = 0x2,
-	EF_BULLET = 0x4,
-	EF_PLANET = 0x8
+	EF_DESTROYED = 0x01,
+	EF_PLAYER    = 0x02,
+	EF_BULLET    = 0x04,
+	EF_PLANET    = 0x08,
+	EF_TETHER    = 0x10,
+	EF_HOOK      = 0x20
 };
 
 enum entity_type : u16 {
 	ET_PLAYER,
 	ET_BULLET,
-	ET_PLANET
+	ET_PLANET,
+	ET_TETHER,
+	ET_HOOK
 };
 
 struct entity_handle {
@@ -56,6 +60,8 @@ struct player : entity {
 
 	bool _firing;
 	int _reload_time;
+	float _tether_shot_visible;
+	int _tether_reload;
 };
 
 struct bullet : entity {
@@ -78,9 +84,42 @@ struct planet : entity {
 
 	void draw_bg(draw_context* dc);
 	void draw_mg(draw_context* dc);
+	void draw_mg2(draw_context* dc);
 	void draw_fg(draw_context* dc);
 
 	vec2 get_exit_point(vec2 start, vec2 end, float point_radius);
+
+	bool _captured;
+	float _pulse;
+	float _pulse_t;
+
+	array<entity_handle> _tethered_to;
+};
+
+float planet_radius(planet* self, planet* other);
+
+struct tether : entity {
+	tether();
+
+	virtual void init();
+	virtual void tick();
+	virtual void draw(draw_context* dc);
+
+	entity_handle _from;
+	entity_handle _to;
+};
+
+bool has_tether(entity* a, entity* b);
+
+struct hook : entity {
+	hook();
+
+	virtual void init();
+	virtual void tick();
+	virtual void draw(draw_context* dc);
+
+	int _time;
+	entity_handle _from;
 };
 
 struct world {
@@ -90,6 +129,7 @@ struct world {
 	array<entity*> handles;
 
 	vec2 camera_pos;
+	vec2 camera_vel;
 	vec2 camera_target;
 	vec2 camera_old_target;
 
@@ -110,6 +150,7 @@ entity_handle get_entity_handle(entity* e);
 int entity_move_slide(entity* e);
 
 planet* get_nearest_planet(vec2 pos);
+planet* get_nearest_planet_unique(vec2 pos);
 
 void world_tick();
 void world_draw(draw_context* dc);

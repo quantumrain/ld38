@@ -125,6 +125,12 @@
     <ClCompile Include="..\src\game\stars.cpp">
       <Filter>game</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\game\tether.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\game\hook.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\shaders\fs_blur_x.hlsl">

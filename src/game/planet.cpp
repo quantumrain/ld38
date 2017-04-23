@@ -1,32 +1,9 @@
 #include "pch.h"
 #include "game.h"
 
-void avoid_crowd(entity* self, entity_type type, float radius_factor) {
-	for(auto e : g_world.entities) {
-		if ((e == self) || (e->_flags & EF_DESTROYED) || (e->_type != type))
-			continue;
-
-		vec2  d     = self->_pos - e->_pos;
-		float min_d = (self->_radius + e->_radius) * radius_factor;
-
-		if (length_sq(d) > square(min_d))
-			continue;
-
-		float l = length(d);
-
-		if (l < 0.001f)
-			d = g_world.r.range(vec2(1.0f));
-		else
-			d /= l;
-
-		self->_vel += d * 8.0f;
-		e->_vel    -= d * 8.0f;
-	}
-}
-
 vec2 get_center(entity_type type) {
 	vec2 centre;
-	int count = 1; // Start at one so we include the origin so over time we tend back towards the centre of space
+	int count = 1;
 
 	for(auto e : g_world.entities) {
 		if ((e->_flags & EF_DESTROYED) || (e->_type != type))
@@ -36,12 +13,18 @@ vec2 get_center(entity_type type) {
 		count++;
 	}
 
-	return centre / (float)count;
+	if (count > 0)
+		 centre /= (float)count;
+
+	return centre;
 }
 
 planet::planet() : entity(ET_PLANET) {
 	_flags |= EF_PLANET;
 	_radius = 50.0f;
+	_captured = false;
+	_pulse = g_world.r.rand(1.0f);
+	_pulse_t = g_world.r.range(PI);
 
 	_vel = g_world.r.range(vec2(100.0f));
 }
@@ -53,7 +36,7 @@ void planet::tick() {
 	if (length_sq(_vel) > square(300.0f))
 		_vel *= 0.99f;
 
-	_vel += (get_center(_type) - _pos) * 0.001f;
+	_vel += (get_center(_type) - _pos) * 0.0001f;
 
 	/*for(auto e : g_world.entities) {
 		if ((e->_flags & EF_DESTROYED) || (e->_type != ET_PLANET) && (e != this))
@@ -68,10 +51,46 @@ void planet::tick() {
 		}
 	}*/
 
-	//avoid_crowd(this, _type, 1.1f);
-	avoid_crowd(this, _type, 0.66f);
+	for(auto e : g_world.entities) {
+		if ((e == this) || (e->_flags & EF_DESTROYED) || (e->_type != ET_PLANET))
+			continue;
+
+		vec2  delta  = _pos - e->_pos;
+		float sr     = planet_radius(this, (planet*)e);
+		float er     = planet_radius((planet*)e, this);
+		float cr     = sr + er;
+
+		if (length_sq(delta) > square(cr))
+			continue;
+
+		float d = length(delta);
+
+		if (d < 0.001f)
+			delta = g_world.r.range(vec2(1.0f));
+		else
+			delta /= d;
+
+		float f = (cr - d) * 0.5f;
+
+		//debug_line(self->_pos, e->_pos, rgba(), 1);
+		//debug_line(self->_pos, self->_pos + delta*f, rgba(1,0,0,1), 1);
+		//debug_line(e->_pos, e->_pos - delta*f, rgba(0,1,0,1), 1);
+
+		_vel    += delta * f;
+		e->_vel -= delta * f;
+
+		if (_captured && ((planet*)e)->_captured) {
+			if (d < (cr * 0.8f)) {
+				if (dot(   _vel, -delta) > 0.0f) {    _vel -= -delta * dot(   _vel, -delta); }
+				if (dot(e->_vel,  delta) > 0.0f) { e->_vel -=  delta * dot(e->_vel,  delta); }
+			}
+		}
+	}
 
 	entity_move_slide(this);
+
+	_pulse_t += DT * 5.0f;
+	_pulse = 0.1f + (1.0f + cosf(_pulse_t)) * 0.5f;
 }
 
 void planet::draw_bg(draw_context* dc) {
@@ -81,7 +100,7 @@ void planet::draw_bg(draw_context* dc) {
 	dc->shape(vec2(), 64, _radius + 2.0f, 0.0f, rgba(0.0f, 0.0f, 0.075f, 0.0f));
 	dc->shape(vec2(), 64, _radius + 0.0f, 0.0f, rgba(0.0f, 0.0f, 0.15f, 0.0f));
 	dc->shape(vec2(), 64, _radius - 2.0f, 0.0f, rgba(0.0f, 0.0f, 0.3f, 0.0f));
-	dc->shape(vec2(), 64, _radius - 4.0f, 0.0f, rgba(1.4f, 0.3f, 1.6f, 0.0f));
+	dc->shape(vec2(), 64, _radius - 4.0f, 0.0f, rgba(0.5f, 0.3f, 1.6f, 0.0f));
 }
 
 void planet::draw_mg(draw_context* dc) {
@@ -91,13 +110,25 @@ void planet::draw_mg(draw_context* dc) {
 	dc->shape(vec2(), 64, _radius - 5.0f, 0.0f, rgba(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
-void planet::draw_fg(draw_context* dc) {
-	dc->translate(_pos);
-	dc->rotate_z(_rot);
+void planet::draw_mg2(draw_context* dc) {
+	if (_captured) {
+		dc->translate(_pos);
+		dc->rotate_z(_rot);
 
-	dc->shape_outline(vec2(), 64, 5.0f, 0.0f, 0.5f, rgba(1.4f, 0.3f, 1.6f, 0.0f) * 0.1f);
-	dc->shape_outline(vec2(), 64, 10.0f, 0.0f, 0.5f, rgba(1.4f, 0.3f, 1.6f, 0.0f) * 0.08f);
-	dc->shape_outline(vec2(), 64, 15.0f, 0.0f, 0.5f, rgba(1.4f, 0.3f, 1.6f, 0.0f) * 0.06f);
+		dc->shape_outline(vec2(), 64, 20.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.5f, 1.0f) * 0.5f * (0.5f + _pulse * 0.5f));
+	}
+}
+
+void planet::draw_fg(draw_context* dc) {
+	if (_captured) {
+		dc->translate(_pos);
+		dc->rotate_z(_rot);
+
+		dc->shape(vec2(), 64, 15.0f, 0.0f, rgba(0.1f, 0.0f, 0.1f, 1.0f));
+
+		dc->shape_outline(vec2(), 64, 5.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * (1.2f - _pulse) * 2.75f);
+		dc->shape_outline(vec2(), 64, 15.0f, 0.0f, 0.5f, rgba(0.5f, 0.0f, 0.6f, 0.5f) * _pulse * 2.75f);
+	}
 }
 
 vec2 planet::get_exit_point(vec2 start, vec2 end, float point_radius) {
@@ -137,4 +168,13 @@ vec2 planet::get_exit_point(vec2 start, vec2 end, float point_radius) {
 		return start + ray_dir * t2;
 
 	return end;
+}
+
+float planet_radius(planet* self, planet* other) {
+	for(auto& h : self->_tethered_to) {
+		if (get_entity(h) == other)
+			return self->_radius * 0.66f;
+	}
+
+	return self->_radius * 1.2f;
 }
