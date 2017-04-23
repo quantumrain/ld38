@@ -134,6 +134,9 @@
     <ClCompile Include="..\src\game\tracker.cpp">
       <Filter>game</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\game\particles.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\shaders\fs_blur_x.hlsl">

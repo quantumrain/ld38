@@ -51,7 +51,7 @@ void tether::draw_bg(draw_context* dc) {
 		rgba c0 = rgba(0.5f, 0.0f, 0.6f, 0.5f) * from->_pulse * 2.75f;
 		rgba c1 = rgba(0.5f, 0.0f, 0.6f, 0.5f) * to  ->_pulse * 2.75f;
 
-		dc->line(from->_pos, to->_pos, 5.0f, c0, c1);
+		dc->line_ex(from->_pos, to->_pos, 5.0f * (from->_radius / from->_desired_radius), 5.0f * (to->_radius / to->_desired_radius), c0, c1);
 	}
 }
 
@@ -60,7 +60,7 @@ void tether::draw_fg(draw_context* dc) {
 	planet* to   = (planet*)get_entity(_to);
 
 	if (from && to) {
-		dc->line(from->_pos, to->_pos, 4.0f, rgba(0.0f, 1.0f), rgba(0.0f, 1.0f));
+		dc->line_ex(from->_pos, to->_pos, 4.0f * (from->_radius / from->_desired_radius), 4.0f * (to->_radius / to->_desired_radius), rgba(0.0f, 1.0f), rgba(0.0f, 1.0f));
 	}
 }
 

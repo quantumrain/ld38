@@ -190,6 +190,18 @@ void draw_context::line(vec2 p0, vec2 p1, float w, rgba c0, rgba c1) const {
 	quad(a, b, c, d, c0, c0, c1, c1);
 }
 
+void draw_context::line_ex(vec2 p0, vec2 p1, float w0, float w1, rgba c0, rgba c1) const {
+	vec2 n0 = perp(normalise(p1 - p0)) * w0;
+	vec2 n1 = perp(normalise(p1 - p0)) * w1;
+
+	vec2 a = p0 - n0;
+	vec2 b = p0 + n0;
+	vec2 c = p1 - n1;
+	vec2 d = p1 + n1;
+
+	quad(a, b, c, d, c0, c0, c1, c1);
+}
+
 void draw_context::line(vec2 p0, vec2 p1, float w, rgba c) const {
 	line(p0, p1, w, c, c);
 }

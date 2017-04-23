@@ -34,6 +34,8 @@ tracker::tracker() : entity(ET_TRACKER) {
 	_flags |= EF_ENEMY;
 	_radius = 6.0f;
 	_hit_timer = 0;
+	_health = 2;
+	_hurt = 0.0f;
 }
 
 void tracker::init() {
@@ -42,11 +44,10 @@ void tracker::init() {
 void tracker::tick() {
 	_vel *= 0.95f;
 
-	if (g_input.start)
-		destroy_entity(this);
-
 	if (_hit_timer > 0)
 		_hit_timer--;
+
+	_hurt *= 0.8f;
 
 	if (planet* p = get_nearest_planet(_pos)) {
 		vec2  delta = p->_pos - _pos;
@@ -77,6 +78,6 @@ void tracker::draw(draw_context* dc) {
 	dc->rotate_z(_rot);
 
 	for(int i = 0; i < 3; i++) {
-		dc->shape_outline(vec2(), 3, _radius, g_world.r.range(PI), 0.5f, rgba(1.0f, 0.2f, 0.2f, 0.0f));
+		dc->shape_outline(vec2(), 3, _radius, g_world.r.range(PI), 0.5f, rgba(1.0f, 0.2f, 0.2f, 0.0f) + rgba(1.0f, 0.0f) * _hurt);
 	}
 }

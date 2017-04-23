@@ -29,6 +29,7 @@ void game_init() {
 	define_sound(sfx::DIT, "dit", 2, 2);
 
 	init_stars();
+	psys_init(1000);
 
 	//for(int i = 0; i < 200; i++) {
 	//	spawn_entity(new planet, g_world.r.range(vec2(5000.0f, 5000.0f)));
@@ -38,6 +39,8 @@ void game_init() {
 	if (planet* p = spawn_entity(new planet, vec2())) {
 		p->_captured = true;
 		p->_desired_radius = 80.0f;
+		p->_radius = 10.0f;
+		p->_grown = true;
 
 		if (player* pl = spawn_entity(new player, p->_pos)) {
 			pl->_last_planet = get_entity_handle(p);
@@ -61,6 +64,7 @@ void game_frame(vec2 view_size) {
 	// update
 
 	world_tick();
+	psys_update();
 
 	// draw
 

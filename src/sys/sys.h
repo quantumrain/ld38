@@ -97,6 +97,7 @@ struct draw_context {
 	draw_context& colour(const rgba& c)       { return push(c); }
 
 	void line(vec2 p0, vec2 p1, float w, rgba c0, rgba c1) const;
+	void line_ex(vec2 p0, vec2 p1, float w0, float w1, rgba c0, rgba c1) const;
 	void line(vec2 p0, vec2 p1, float w, rgba c) const;
 
 	void line_with_cap(vec2 p0, vec2 p1, float w, rgba c0, rgba c1) const;

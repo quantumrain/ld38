@@ -5,7 +5,7 @@ world g_world;
 
 // world
 
-world::world() : _level(), _level_timer() { }
+world::world() : _num_planets_created(), _level(), _level_timer() { }
 
 // entity
 
@@ -140,20 +140,53 @@ planet* get_nearest_planet_unique(vec2 pos) {
 	return best;
 }
 
+entity* find_enemy_near_line(vec2 from, vec2 to, float r) {
+	entity* best   = 0;
+	float   best_t = FLT_MAX;
+
+	vec2	d = to - from;
+	float	l = length(d);
+
+	d /= l;
+
+	for(auto e : g_world.entities) {
+		if (e->_flags & EF_DESTROYED)
+			continue;
+
+		if (!(e->_flags & EF_ENEMY))
+			continue;
+
+		float t = clamp(dot((e->_pos - from), d), 0.0f, l);
+		vec2  p = from + d * t;
+		float s = length_sq(e->_pos - p);
+
+		if (s < square(e->_radius + r)) {
+			if (t < best_t) {
+				best   = e;
+				best_t = t;
+			}
+		}
+	}
+
+	return best;
+}
+
 void world_tick() {
 	world* w = &g_world;
 
 	// update
 
-	if (--w->_level_timer <= 0) {
-		vec2 player_pos;
-		for_all([&](entity* e) { if (e->_type == ET_PLAYER) player_pos = e->_pos; });
+	if (w->_num_planets_created > 0) {
+		if (--w->_level_timer <= 0) {
+			vec2 player_pos;
+			for_all([&](entity* e) { if (e->_type == ET_PLAYER) player_pos = e->_pos; });
 
-		w->_level++;
-		w->_level_timer = 240;
+			w->_level++;
+			w->_level_timer = max(600 - (w->_level * 10) - (w->_num_planets_created * 10), 240);
 
-		for(int i = 0; i < w->_level; i++) {
-			spawn_entity(new tracker, player_pos + rotation_of(g_world.r.range(PI)) * 1000.0f);
+			for(int i = 0; i < w->_level; i++) {
+				spawn_entity(new tracker, player_pos + rotation(g_world.r.range(PI)) * g_world.r.range(1000.0f, 1500.0f));
+			}
 		}
 	}
 
@@ -204,6 +237,8 @@ void world_draw(draw_context* dc) {
 	for_all([dc](entity* e) { if (e->_type == ET_TETHER) ((tether*)e)->draw_bg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_TETHER) ((tether*)e)->draw_fg(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_type == ET_PLANET) ((planet*)e)->draw_fg(&dc->copy()); });
+
+	psys_render(&dc->copy());
 
 	for_all([dc](entity* e) { if (!(e->_flags & (EF_PLAYER | EF_PLANET | EF_TETHER))) e->draw(&dc->copy()); });
 	for_all([dc](entity* e) { if (e->_flags & EF_PLAYER) e->draw(&dc->copy()); });

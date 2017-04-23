@@ -8,6 +8,7 @@ player::player() : entity(ET_PLAYER) {
 	_radius = 5.0f;
 	_tether_shot_visible = 0.0f;
 	_tether_reload = 0;
+	_heal_tick = 0;
 }
 
 void player::init() {
@@ -16,6 +17,9 @@ void player::init() {
 void player::tick() {
 	if (_reload_time > 0)
 		_reload_time--;
+
+	if (_heal_tick > 0)
+		_heal_tick--;
 
 	vec2 key_move = g_input.pad_left;
 
@@ -53,7 +57,7 @@ void player::tick() {
 	planet* was_p = (planet*)get_entity(_last_planet);
 
 	if (!was_p) {
-		was_p = get_nearest_planet(_pos);
+		destroy_entity(this);
 	}
 
 	if (was_p) {
@@ -71,7 +75,7 @@ void player::tick() {
 
 	if (planet* p = get_nearest_planet(_pos)) {
 		if (was_p && (was_p != p)) {
-			if (!p->_captured) {
+			if (!p->_captured || !p->_grown) {
 				p = was_p;
 			}
 			else {
@@ -93,6 +97,15 @@ void player::tick() {
 		}
 
 		_last_planet = get_entity_handle(p);
+
+		if (p->_health < MAX_PLANET_HEALTH) {
+			if (_heal_tick <= 0) {
+				_heal_tick = 10;
+				p->_health = clamp(p->_health + 2, 0, MAX_PLANET_HEALTH);
+				p->_healed = 1.0f;
+				//fx_explosion(_pos, 0.5f, 1, rgba(0.1f, 0.6f, 0.1f, 0.0f), 0.5f);
+			}
+		}
 	}
 
 	if (firing) {
@@ -159,12 +172,12 @@ void player::tick() {
 
 								int count = g_world.r.range(4, 10);
 
-								float dd = p->_radius - 20.0f;
+								float dd = p->_radius;
 
 								for(int i = 0; i < count; i++) {
 									float r = (i < (count - 1)) ? 20.0f : g_world.r.range(40.0f, 80.0f);
 
-									dd += r;
+									dd += 1.0f;
 
 									parts[i] = spawn_entity(new planet, p->_pos + normalise(_pos - p->_pos) * dd);
 
@@ -178,6 +191,7 @@ void player::tick() {
 
 								make_tether(p, parts[0]);
 						
+								g_world._num_planets_created++;
 		#endif
 							}
 						}
@@ -200,6 +214,7 @@ void player::draw(draw_context* dc) {
 	dc->translate(_pos);
 	dc->rotate_z(_rot);
 
+#if 0
 	rgba outline = rgba(0.7f, 0.9f, 1.0f, 1.0f);
 	rgba black   = rgba(0.0f, 1.0f);
 
@@ -219,6 +234,21 @@ void player::draw(draw_context* dc) {
 
 	dc->shape(vec2(0.0f, 0.0f), 5, r * 0.5f, 0.0f, outline);
 	dc->shape(vec2(0.0f, 0.0f), 5, r * 0.5f - 1.5f, 0.0f, black);
+#else
+	//dc->shape_outline(vec2(), 64, _radius, 0.0f, 0.15f, rgba());
+
+	static float t;
+	t+=DT * 15.0f;
+	float a = lerp(0.75f, 1.0f, (1.0f + cosf(t + 0.0f)) * 0.5f);
+	float b = lerp(0.75f, 1.0f, (1.0f + cosf(t + 2.0f)) * 0.5f);
+	float c = lerp(0.75f, 1.0f, (1.0f + cosf(t + 4.0f)) * 0.5f);
+
+	for(int i = 0; i < 3; i++) {
+		dc->shape_outline(vec2(2.0f, 0.0f), 3, r * 1.00f * a, g_world.r.range(0.2f), 0.25f, rgba() * 1.50f);
+		dc->shape_outline(vec2(1.0f, 0.0f), 4, r * 1.25f * b, g_world.r.range(0.2f), 0.25f, rgba() * 1.25f);
+		dc->shape_outline(vec2(0.0f, 0.0f), 5, r * 1.00f * c, g_world.r.range(0.2f), 0.25f, rgba() * 1.00f);
+	}
+#endif
 
 	if (planet* p = get_nearest_planet(_pos)) {
 		float mr = p->_radius - _radius * 4.0f;

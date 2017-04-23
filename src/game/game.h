@@ -7,6 +7,7 @@
 #define DT (1.0f / 60.0f)
 
 #define MAX_TETHERS 3
+#define MAX_PLANET_HEALTH 30
 
 struct world;
 
@@ -67,6 +68,7 @@ struct player : entity {
 	float _tether_shot_visible;
 	int _tether_reload;
 	entity_handle _last_planet;
+	int _heal_tick;
 };
 
 struct bullet : entity {
@@ -98,10 +100,12 @@ struct planet : entity {
 
 	bool _captured;
 	bool _connector;
+	bool _grown;
 	float _pulse;
 	float _pulse_t;
 	float _desired_radius;
 	float _hurt;
+	float _healed;
 	int _health;
 
 	vec2 _wander;
@@ -146,6 +150,8 @@ struct tracker : entity {
 	virtual void draw(draw_context* dc);
 
 	int _hit_timer;
+	int _health;
+	float _hurt;
 };
 
 struct world {
@@ -161,6 +167,8 @@ struct world {
 
 	vec2 view_size;
 	mat44 view_proj;
+
+	int _num_planets_created;
 
 	int _level;
 	int _level_timer;
@@ -180,6 +188,8 @@ int entity_move_slide(entity* e);
 
 planet* get_nearest_planet(vec2 pos);
 planet* get_nearest_planet_unique(vec2 pos);
+
+entity* find_enemy_near_line(vec2 from, vec2 to, float r);
 
 void world_tick();
 void world_draw(draw_context* dc);
@@ -202,3 +212,10 @@ template<typename F> void for_all(F&& f) {
 void init_stars();
 void update_stars(vec2 delta);
 void render_stars(draw_context* dc);
+
+void psys_init(int max_particles);
+void psys_update();
+void psys_render(draw_context* dc);
+
+void psys_spawn(vec2 pos, vec2 vel, float damp, float size0, float size1, float rot_v, rgba c, int lifetime);
+void fx_explosion(vec2 pos, float strength, int count, rgba c, float psize);
