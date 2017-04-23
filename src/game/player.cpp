@@ -51,7 +51,10 @@ void player::tick() {
 	planet* was_p = get_nearest_planet(_pos);
 
 	if (was_p) {
-		_vel += was_p->_vel; // TODO: consider tracking our current planet, so we only switch reference frames when we definitively leave a previous one
+		// TODO: consider tracking our current planet, so we only switch reference frames when we definitively leave a previous one
+		//       maybe switch reference frame when we totally exit our previous one?
+		//       maybe switch reference frame if we move towards the centre of a different one?
+		_vel += was_p->_vel;
 	}
 
 	entity_move_slide(this);

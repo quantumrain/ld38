@@ -38,6 +38,61 @@ void destroy_entity(entity* e) {
 		e->_flags |= EF_DESTROYED;
 }
 
+entity* get_entity(entity_handle h) {
+	world* w = &g_world;
+
+	if (entity** ep = w->handles.at(h.index)) {
+		if (entity* e = *ep) {
+			if (e->_handle_internal.index == h.index)
+				return e;
+		}
+	}
+
+	return 0;
+}
+
+entity_handle get_entity_handle(entity* e) {
+	world* w = &g_world;
+
+	if (e) {
+		if (get_entity(e->_handle_internal))
+			return e->_handle_internal;
+
+		for(int i = 0; i < w->handles.size(); i++) {
+			if (!w->handles[i]) {
+				w->handles[i] = e;
+				return entity_handle(i);
+			}
+		}
+
+		if (w->handles.push_back(e)) {
+			e->_handle_internal = entity_handle(w->handles.size() - 1);
+			return e->_handle_internal;
+		}
+	}
+
+	return entity_handle();
+}
+
+void entity_prune() {
+	world* w = &g_world;
+
+	for(int i = 0; i < w->entities.size(); ) {
+		if (w->entities[i]->_flags & EF_DESTROYED) {
+			int h = w->entities[i]->_handle_internal.index;
+
+			if (h < w->handles.size()) {
+				assert(w->handles[h] == w->entities[i]);
+				w->handles[h] = 0;
+			}
+
+			w->entities.swap_remove(i);
+		}
+		else
+			i++;
+	}
+}
+
 int entity_move_slide(entity* e) {
 	int clipped = 0;
 
@@ -72,14 +127,7 @@ void world_tick() {
 
 	for_all([](entity* e) { e->tick(); });
 
-	// prune
-
-	for(int i = 0; i < w->entities.size(); ) {
-		if (w->entities[i]->_flags & EF_DESTROYED)
-			w->entities.swap_remove(i);
-		else
-			i++;
-	}
+	entity_prune();
 
 	// camera
 

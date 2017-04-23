@@ -21,6 +21,12 @@ enum entity_type : u16 {
 	ET_PLANET
 };
 
+struct entity_handle {
+	u16 index;
+
+	explicit entity_handle(u16 index_ = 0xFFFF) : index(index_) { }
+};
+
 struct entity {
 	entity(entity_type type);
 	virtual ~entity();
@@ -29,8 +35,9 @@ struct entity {
 	virtual void tick();
 	virtual void draw(draw_context* dc);
 
-	u16         _flags;
-	entity_type _type;
+	u16           _flags;
+	entity_type   _type;
+	entity_handle _handle_internal;
 
 	vec2 _pos;
 	vec2 _old_pos;
@@ -80,6 +87,7 @@ struct world {
 	random r;
 
 	list<entity> entities;
+	array<entity*> handles;
 
 	vec2 camera_pos;
 	vec2 camera_target;
@@ -95,6 +103,9 @@ extern world g_world;
 
 entity* spawn_entity(entity* e, vec2 initial_pos);
 void destroy_entity(entity* e);
+
+entity* get_entity(entity_handle h);
+entity_handle get_entity_handle(entity* e);
 
 int entity_move_slide(entity* e);
 
